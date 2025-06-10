@@ -6,15 +6,24 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import RegisterScreen from './screens/RegisterScreen';
 import LoginScreen from './screens/LoginScreen';
+import HomeScreen from './screens/HomeScreen';
+import { supabase } from './supabase';
 
 const Stack = createNativeStackNavigator();
 
 function SplashScreen({ navigation }) {
   useEffect(() => {
-    const timer = setTimeout(() => {
-      navigation.replace('Register');
-    }, 3000);
-    return () => clearTimeout(timer);
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        navigation.replace('Home');
+      } else {
+        navigation.replace('Login');
+      }
+
+    };
+
+    checkSession();
   }, [navigation]);
 
   return (
@@ -25,11 +34,13 @@ function SplashScreen({ navigation }) {
   );
 }
 
+
 export default function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Splash" component={SplashScreen} />
+        <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen name="Register" component={RegisterScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
       </Stack.Navigator>

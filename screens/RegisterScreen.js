@@ -11,6 +11,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { supabase } from '../supabase';
 
 export default function RegisterScreen() {
   const [name, setName] = useState('');
@@ -20,9 +21,50 @@ export default function RegisterScreen() {
 
   const navigation = useNavigation();
 
-  const handleSubmit = () => {
-    console.log('Register submitted');
-  };
+const handleSubmit = async () => {
+  const cleanEmail = email.trim();
+  const cleanPassword = password.trim();
+
+  // Validation simple du mail
+  if (!cleanEmail.includes('@') || !cleanEmail.includes('.')) {
+    alert('Format d’email invalide, il doit contenir un "@" et un "."');
+    return;
+  }
+
+  // Inscription via Supabase Auth
+  const { data, error } = await supabase.auth.signUp({
+    email: cleanEmail,
+    password: cleanPassword,
+  });
+
+  if (error) {
+    alert('Erreur: ' + error.message);
+    return;
+  }
+
+  const user = data?.user;
+
+  if (user) {
+    // Insertion dans la table "profiles"
+    const { error: profileError } = await supabase.from('profiles').insert([
+      {
+        id: user.id,
+        name: name,
+        email: cleanEmail,
+        number: number,
+      },
+    ]);
+
+    if (profileError) {
+      alert('Erreur lors de la création du profil: ' + profileError.message);
+      return;
+    }
+
+    alert('Inscription réussie !');
+    navigation.navigate('Login');
+  }
+};
+
 
   return (
     <KeyboardAvoidingView

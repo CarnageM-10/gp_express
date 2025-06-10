@@ -11,17 +11,78 @@ import {
   ScrollView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { supabase } from '../supabase';
+
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false); // <-- ajoute ceci
 
   const navigation = useNavigation();
 
-  const handleLogin = () => {
-    console.log('Login submitted');
+  const handleLogin = async () => {
+    if (!email || !password) {
+      alert('Merci de remplir email et mot de passe');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      setLoading(false);
+
+      if (error) {
+        alert('Erreur: ' + error.message);
+        return;
+      }
+
+      alert('Bienvenue !');
+
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user;
+
+      if (!user) {
+        alert('Utilisateur non connecté');
+        return;
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError && profileError.code !== 'PGRST116') {
+        alert('Erreur lors de la vérification du profil : ' + profileError.message);
+        return;
+      }
+
+      if (!profile) {
+        const { error: insertError } = await supabase.from('profiles').insert({
+          id: user.id,
+          email: user.email,
+          name: '',
+          number: '',
+        });
+
+        if (insertError) {
+          alert('Erreur lors de la création du profil : ' + insertError.message);
+          return;
+        }
+      }
+
+      navigation.replace('Home');  // <-- navigation vers Home
+    } catch (e) {
+      setLoading(false);
+      alert('Erreur inattendue: ' + e.message);
+    }
   };
 
+  
   return (
     <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: '#fff' }}
