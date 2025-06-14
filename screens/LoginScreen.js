@@ -13,11 +13,11 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { supabase } from '../supabase';
 
-
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false); // <-- ajoute ceci
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const navigation = useNavigation();
 
@@ -50,6 +50,7 @@ export default function LoginScreen() {
         return;
       }
 
+      // Vérifie si un profil existe déjà
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -61,12 +62,15 @@ export default function LoginScreen() {
         return;
       }
 
+      // Si profil inexistant, on l’insère avec les infos du user_metadata
       if (!profile) {
+        const { name = '', number = '' } = user.user_metadata || {};
+
         const { error: insertError } = await supabase.from('profiles').insert({
           id: user.id,
           email: user.email,
-          name: '',
-          number: '',
+          name,
+          number,
         });
 
         if (insertError) {
@@ -75,14 +79,13 @@ export default function LoginScreen() {
         }
       }
 
-      navigation.replace('Home');  // <-- navigation vers Home
+      navigation.replace('Home');
     } catch (e) {
       setLoading(false);
       alert('Erreur inattendue: ' + e.message);
     }
   };
 
-  
   return (
     <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: '#fff' }}
@@ -92,7 +95,6 @@ export default function LoginScreen() {
         <Image source={require('../assets/login.png')} style={styles.topImage} />
 
         <View style={styles.formContainer}>
-
           <TextInput
             style={[styles.input, { marginBottom: 50 }]}
             placeholder="Email"
@@ -100,17 +102,37 @@ export default function LoginScreen() {
             keyboardType="email-address"
             value={email}
             onChangeText={setEmail}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Mot de passe"
-            placeholderTextColor="black"
-            secureTextEntry
-            value={password}
-            onChangeText={setPassword}
+            autoCapitalize="none"
           />
 
-          {/* Bouton Login avec même style que Register */}
+          <View style={styles.passwordContainer}>
+            <TextInput
+              style={[styles.input, { flex: 1, marginBottom: 0 }]}
+              placeholder="Mot de passe"
+              placeholderTextColor="black"
+              secureTextEntry={!showPassword}
+              value={password}
+              onChangeText={setPassword}
+            />
+            <TouchableOpacity
+              onPress={() => setShowPassword(!showPassword)}
+              style={styles.eyeButton}
+            >
+              <Image
+                source={
+                  showPassword
+                    ? require('../assets/eye-off.png')
+                    : require('../assets/eye.png')
+                }
+                style={styles.eyeIcon}
+              />
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity onPress={() => navigation.navigate('EmailResetRequest')}>
+            <Text style={styles.forgotPasswordText}>Mot de passe oublié ?</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity onPress={handleLogin} style={{ marginTop: 10, alignSelf: 'flex-end' }}>
             <View style={styles.logoGroup}>
               <Text style={styles.logoText}>Login</Text>
@@ -142,12 +164,6 @@ const styles = StyleSheet.create({
   formContainer: {
     paddingHorizontal: 20,
   },
-  formTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: 'black',
-    marginBottom: 20,
-  },
   input: {
     borderBottomWidth: 1,
     borderBottomColor: 'black',
@@ -155,6 +171,25 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 25,
     paddingVertical: 8,
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  eyeButton: {
+    padding: 8,
+  },
+  eyeIcon: {
+    width: 24,
+    height: 24,
+    tintColor: 'black',
+  },
+  forgotPasswordText: {
+    color: 'green',
+    fontSize: 14,
+    marginBottom: 15,
+    textDecorationLine: 'underline',
   },
   bottomRow: {
     flexDirection: 'row',

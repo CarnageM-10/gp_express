@@ -18,53 +18,49 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState('');
   const [number, setNumber] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false); // Pour l'œil
 
   const navigation = useNavigation();
 
-const handleSubmit = async () => {
-  const cleanEmail = email.trim();
-  const cleanPassword = password.trim();
+  const validatePassword = (pwd) => {
+    // Minimum 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial
+    const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
+    return regex.test(pwd);
+  };
 
-  // Validation simple du mail
-  if (!cleanEmail.includes('@') || !cleanEmail.includes('.')) {
-    alert('Format d’email invalide, il doit contenir un "@" et un "."');
-    return;
-  }
+  const handleSubmit = async () => {
+    const cleanEmail = email.trim();
+    const cleanPassword = password.trim();
 
-  // Inscription via Supabase Auth
-  const { data, error } = await supabase.auth.signUp({
-    email: cleanEmail,
-    password: cleanPassword,
-  });
-
-  if (error) {
-    alert('Erreur: ' + error.message);
-    return;
-  }
-
-  const user = data?.user;
-
-  if (user) {
-    // Insertion dans la table "profiles"
-    const { error: profileError } = await supabase.from('profiles').insert([
-      {
-        id: user.id,
-        name: name,
-        email: cleanEmail,
-        number: number,
-      },
-    ]);
-
-    if (profileError) {
-      alert('Erreur lors de la création du profil: ' + profileError.message);
+    if (!cleanEmail.includes('@') || !cleanEmail.includes('.')) {
+      alert('Format d’email invalide, il doit contenir un "@" et un "."');
       return;
     }
 
-    alert('Inscription réussie !');
-    navigation.navigate('Login');
-  }
-};
+    if (!validatePassword(cleanPassword)) {
+      alert('Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial.');
+      return;
+    }
 
+    const { data, error } = await supabase.auth.signUp({
+      email: cleanEmail,
+      password: cleanPassword,
+      options: {
+        data: {
+          name,
+          number,
+        },
+      },
+    });
+
+    if (error) {
+      alert('Erreur : ' + error.message);
+      return;
+    }
+
+    alert('Un email de confirmation vous a été envoyé. Veuillez vérifier votre boîte mail.');
+    navigation.navigate('Login');
+  };
 
   return (
     <KeyboardAvoidingView
@@ -75,8 +71,6 @@ const handleSubmit = async () => {
         <Image source={require('../assets/register.png')} style={styles.topImage} />
 
         <View style={styles.formContainer}>
-          
-
           <TextInput
             style={styles.input}
             placeholder="Nom"
@@ -100,16 +94,32 @@ const handleSubmit = async () => {
             value={number}
             onChangeText={setNumber}
           />
-          <TextInput
-            style={styles.input}
-            placeholder="Mot de passe"
-            placeholderTextColor="black"
-            secureTextEntry
-            value={password}
-            onChangeText={setPassword}
-          />
 
-          {/* Le bouton "Register" avec le style du bas, déplacé ici */}
+          <View style={styles.passwordContainer}>
+            <TextInput
+              style={[styles.input, { flex: 1 }]}
+              placeholder="Mot de passe"
+              placeholderTextColor="black"
+              secureTextEntry={!showPassword}
+              value={password}
+              onChangeText={setPassword}
+              autoCapitalize="none"
+            />
+            <TouchableOpacity
+              onPress={() => setShowPassword(!showPassword)}
+              style={styles.eyeButton}
+            >
+              <Image
+                source={
+                  showPassword
+                    ? require('../assets/eye-off.png')
+                    : require('../assets/eye.png')
+                }
+                style={styles.eyeIcon}
+              />
+            </TouchableOpacity>
+          </View>
+
           <TouchableOpacity onPress={handleSubmit} style={{ marginTop: 10, alignSelf: 'flex-end' }}>
             <View style={styles.logoGroup}>
               <Text style={styles.logoText}>Register</Text>
@@ -141,12 +151,6 @@ const styles = StyleSheet.create({
   formContainer: {
     paddingHorizontal: 20,
   },
-  formTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: 'black',
-    marginBottom: 20,
-  },
   input: {
     borderBottomWidth: 1,
     borderBottomColor: 'black',
@@ -154,6 +158,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 25,
     paddingVertical: 8,
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  eyeButton: {
+    padding: 8,
+  },
+  eyeIcon: {
+    width: 24,
+    height: 24,
+    tintColor: 'black',
   },
   bottomRow: {
     flexDirection: 'row',

@@ -93,6 +93,7 @@ useEffect(() => {
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <Text style={styles.logoutText}>Déconnexion</Text>
       </TouchableOpacity>
+      
     </View>
   );
 }
