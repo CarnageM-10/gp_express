@@ -15,39 +15,39 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const navigation = useNavigation();
 
-useEffect(() => {
-  const fetchProfile = async () => {
-    const { data: { session }, error } = await supabase.auth.getSession();
+  useEffect(() => {
+    const fetchProfile = async () => {
+      const {
+        data: { session },
+        error,
+      } = await supabase.auth.getSession();
 
-    if (error) {
-      
-      return;
-    }
+      if (error || !session?.user) {
+        Alert.alert('Erreur', 'Session non trouvée ou utilisateur non connecté.');
+        navigation.navigate('Login');
+        return;
+      }
 
-    const user = session?.user;
-    if (!user) {
-      navigation.navigate('Login');
-      return;
-    }
+      const user = session.user;
 
-    const { data, error: profileError } = await supabase
-      .from('profiles')
-      .select('name, email, number')
-      .eq('id', user.id)
-      .single();
+      const { data, error: profileError } = await supabase
+        .from('profiles')
+        .select('name, email, number')
+        .eq('auth_id', user.id)  // <-- Utilise auth_id ici (UUID)
+        .single();
 
-    if (profileError) {
-      Alert.alert('Erreur', profileError.message);
+      if (profileError) {
+        Alert.alert('Erreur', profileError.message);
+        setLoading(false);
+        return;
+      }
+
+      setProfile(data);
       setLoading(false);
-      return;
-    }
+    };
 
-    setProfile(data);
-    setLoading(false);
-  };
-
-  fetchProfile();
-}, []);
+    fetchProfile();
+  }, [navigation]);
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
@@ -56,6 +56,50 @@ useEffect(() => {
     } else {
       navigation.navigate('Login');
     }
+  };
+
+  const handleDeleteAccount = async () => {
+    Alert.alert(
+      'Confirmation',
+      'Es-tu sûr de vouloir supprimer ton compte ? Cette action est irréversible.',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Supprimer',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const {
+                data: { session },
+                error: sessionError,
+              } = await supabase.auth.getSession();
+
+              if (sessionError || !session?.user) {
+                Alert.alert('Erreur', 'Utilisateur non connecté.');
+                return;
+              }
+
+              const userId = session.user.id;
+
+              // Appel à la fonction Edge pour suppression
+              const { error: deleteError } = await supabase.functions.invoke('delete-user', {
+                body: { user_id: userId },
+              });
+
+              if (deleteError) {
+                Alert.alert('Erreur', deleteError.message);
+              } else {
+                Alert.alert('✅ Succès', 'Ton compte a été supprimé.');
+                navigation.navigate('Login');
+              }
+            } catch (error) {
+              console.error(error);
+              Alert.alert('Erreur inconnue', 'Une erreur est survenue.');
+            }
+          },
+        },
+      ]
+    );
   };
 
   if (loading) {
@@ -93,7 +137,10 @@ useEffect(() => {
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <Text style={styles.logoutText}>Déconnexion</Text>
       </TouchableOpacity>
-      
+
+      <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteAccount}>
+        <Text style={styles.logoutText}>🗑️ Supprimer mon compte</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -103,8 +150,8 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     backgroundColor: '#fff',
-    justifyContent: 'center',     
-    alignItems: 'center',         
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   card: {
     backgroundColor: '#f9f9f9',
@@ -114,7 +161,7 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 10,
-    width: '90%',                
+    width: '90%',
   },
   label: {
     fontWeight: 'bold',
@@ -131,8 +178,16 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 8,
     alignItems: 'center',
-    marginTop: 20,                // remplace marginBottom pour espace sous la carte
-    width: '90%',                 // pour que le bouton ait la même largeur que la carte
+    marginTop: 20,
+    width: '90%',
+  },
+  deleteButton: {
+    backgroundColor: '#e53935',
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 10,
+    width: '90%',
   },
   logoutText: {
     color: 'white',
@@ -140,9 +195,9 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   loading: {
-    flex:1,
-    justifyContent:'center',
-    alignItems:'center'
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   message: {
     fontSize: 18,
