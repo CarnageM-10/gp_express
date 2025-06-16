@@ -6,32 +6,31 @@ export default function EmailResetRequestScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
 
-const handleResetRequest = async () => {
-  if (!email) {
-    Alert.alert('Erreur', 'Merci de renseigner votre e-mail.');
-    return;
-  }
+  const handleResetRequest = async () => {
+    if (!email) {
+      Alert.alert('Erreur', 'Merci de renseigner votre e-mail.');
+      return;
+    }
 
-  setLoading(true);
+    setLoading(true);
 
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: 'gp-express://reset',
-  });
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: 'https://gp-express-reset-mdp.netlify.app/reset-password.html',
+    });
 
-  setLoading(false);
+    setLoading(false);
 
-  if (error) {
-    Alert.alert('Erreur', error.message);
-  } else {
-    Alert.alert('Succès', 'Vérifie ta boîte mail pour continuer.', [
-      {
-        text: 'OK',
-        onPress: () => navigation.navigate('ResetPassword'),
-      },
-    ]);
-  }
-};
-
+    if (error) {
+      Alert.alert('Erreur', error.message);
+    } else {
+      Alert.alert('Succès', 'Vérifie ta boîte mail pour continuer.', [
+        {
+          text: 'OK',
+          onPress: () => navigation.navigate('Login'), 
+        },
+      ]);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -46,7 +45,7 @@ const handleResetRequest = async () => {
       />
       <TouchableOpacity onPress={handleResetRequest} style={styles.button}>
         <Text style={styles.buttonText}>
-          {loading ? 'Envoi en cours...' : 'Envoyer l’email'}
+          {loading ? 'Envoi en cours...' : 'Envoyer l’e-mail'}
         </Text>
       </TouchableOpacity>
     </View>
@@ -54,9 +53,34 @@ const handleResetRequest = async () => {
 }
 
 const styles = StyleSheet.create({
-  container: { flex:1, justifyContent:'center', padding:20, backgroundColor:'#fff' },
-  title: { fontSize:22, fontWeight:'bold', marginBottom:20, color:'black' },
-  input: { borderBottomWidth:1, borderBottomColor:'black', padding:10, marginBottom:20, color:'black' },
-  button: { backgroundColor:'green', padding:15, borderRadius:8, alignItems:'center' },
-  buttonText: { color:'white', fontWeight:'bold', fontSize:18 },
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    padding: 20,
+    backgroundColor: '#fff',
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    color: 'black',
+  },
+  input: {
+    borderBottomWidth: 1,
+    borderBottomColor: 'black',
+    padding: 10,
+    marginBottom: 20,
+    color: 'black',
+  },
+  button: {
+    backgroundColor: 'green',
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 18,
+  },
 });
