@@ -54,21 +54,19 @@ const handleLogin = async () => {
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('*')
-      .eq('auth_id', user.id)  // <-- MODIF ici
+      .eq('auth_id', user.id)
       .single();
 
-    // Gestion d'erreur autre que absence de profil
     if (profileError && profileError.code !== 'PGRST116') {
       alert('Erreur lors de la vérification du profil : ' + profileError.message);
       return;
     }
 
-    // Si profil inexistant, on l’insère avec les infos du user_metadata
     if (!profile) {
       const { name = '', number = '' } = user.user_metadata || {};
 
       const { error: insertError } = await supabase.from('profiles').insert({
-        auth_id: user.id,  
+        auth_id: user.id,
         email: user.email,
         name,
         number,
@@ -80,7 +78,30 @@ const handleLogin = async () => {
       }
     }
 
-    navigation.replace('AdhesionForm');
+    // Vérification dans la table adhesions
+    const { data: adhesionData, error: adhesionError } = await supabase
+      .from('adhesions')
+      .select('is_validated')
+      .eq('user_id', user.id)
+      .single();
+
+    if (adhesionError && adhesionError.code !== 'PGRST116') {
+      console.error(adhesionError);
+      alert('Erreur lors de la récupération des données d’adhésion');
+      return;
+    }
+
+    if (!adhesionData) {
+      // Pas encore d'inscription
+      navigation.replace('AdhesionForm');
+    } else if (adhesionData.is_validated === false) {
+      // Dossier en attente
+      navigation.replace('WaitingValidation');
+    } else if (adhesionData.is_validated === true) {
+      // Dossier validé
+      navigation.replace('Success');
+    }
+
   } catch (e) {
     setLoading(false);
     alert('Erreur inattendue: ' + e.message);

@@ -16,6 +16,8 @@ import { WebView } from 'react-native-webview';
 import { supabase } from '../lib/supabase';
 import { Buffer } from 'buffer';
 import * as Print from 'expo-print';
+import { useNavigation } from '@react-navigation/native';
+
 
 export default function AdhesionFormScreen() {
   const [privacyModalVisible, setPrivacyModalVisible] = useState(false);
@@ -27,6 +29,7 @@ export default function AdhesionFormScreen() {
   const [previewModalVisible, setPreviewModalVisible] = useState(false);
   const [userName, setUserName] = useState('');
   const [userEmail, setUserEmail] = useState('');
+  const navigation = useNavigation();
 
   const FULL_CONTRACT_TEXT = `
     Ce contrat lie l'utilisateur à GP Express pour une mission de transport ou de livraison. 
@@ -211,38 +214,54 @@ const uploadContractPDF = async (folderName, userName, userEmail) => {
 };
 
 
-  const handleSubmit = async () => {
-    if (!userName || !userEmail) {
-      Alert.alert('Erreur', 'Veuillez saisir votre nom et votre email.');
-      return;
-    }
+const handleSubmit = async () => {
+  if (!userName || !userEmail) {
+    Alert.alert('Erreur', 'Veuillez saisir votre nom et votre email.');
+    return;
+  }
 
-    if (passportFiles.length === 0 || housingFiles.length === 0) {
-      Alert.alert('Erreur', 'Veuillez fournir au moins un document passeport et logement.');
-      return;
-    }
+  if (passportFiles.length === 0 || housingFiles.length === 0) {
+    Alert.alert('Erreur', 'Veuillez fournir au moins un document passeport et logement.');
+    return;
+  }
 
+  try {
     const userFolderName = `${userName.trim().replace(/\s+/g, '_')}-${userEmail.trim().replace(/\s+/g, '_')}`;
 
-    const passportUrls = await uploadMultipleFiles(passportFiles, 'passport', userFolderName);
-    const housingUrls = await uploadMultipleFiles(housingFiles, 'housing', userFolderName);
-    const statusUrls = await uploadMultipleFiles(statusFiles, 'status', userFolderName);
+    // Upload fichiers ...
+    // ...
 
-// Commenter ou supprimer cette condition temporairement
-// if (passportUrls.length === 0 || housingUrls.length === 0) {
-//   Alert.alert('Erreur', 'Erreur lors de l\'upload des fichiers.');
-//   return;
-// }
-
-    let contractUrl = null;
-    if (hasSigned) {
-      contractUrl = await uploadContractPDF(userFolderName, userName, userEmail);
-      if (!contractUrl) {
-        Alert.alert('Erreur', 'Erreur lors de l\'upload du contrat signé.');
-        return;
-      }
-    } else {
+    if (!hasSigned) {
       Alert.alert('Erreur', 'Veuillez lire et signer le contrat.');
+      return;
+    }
+
+    const contractUrl = await uploadContractPDF(userFolderName, userName, userEmail);
+    if (!contractUrl) {
+      Alert.alert('Erreur', 'Erreur lors de l\'upload du contrat signé.');
+      return;
+    }
+
+    // Récupération utilisateur connecté
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      Alert.alert('Erreur', 'Utilisateur non connecté.');
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('adhesions')
+      .insert([{
+        user_id: user.id,
+        nom: userName,
+        email: userEmail,
+        is_validated: false,
+        created_at: new Date().toISOString(),
+      }]);
+
+    if (error) {
+      console.error('Erreur insertion adhésion:', error);
+      Alert.alert('Erreur', 'Impossible d’enregistrer votre dossier.');
       return;
     }
 
@@ -254,7 +273,14 @@ const uploadContractPDF = async (folderName, userName, userEmail) => {
     setHousingFiles([]);
     setStatusFiles([]);
     setHasSigned(false);
-  };
+    navigation.replace('WaitingValidation');
+
+  } catch (err) {
+    console.error('Erreur inattendue:', err);
+    Alert.alert('Erreur', 'Une erreur est survenue, veuillez réessayer.');
+  }
+};
+
 
   return (
     <View style={styles.container}>
