@@ -7,8 +7,10 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import RegisterScreen from './screens/RegisterScreen';
 import LoginScreen from './screens/LoginScreen';
 import HomeScreen from './screens/HomeScreen';
-import EmailResetRequestScreen from './screens/EmailResetRequestScreen'; // ✅ Ajouté
-import { supabase } from './supabase';
+import EmailResetRequestScreen from './screens/EmailResetRequestScreen';
+import AdhesionFormScreen from './screens/AdhesionFormScreen'; // ✅ Ajouté
+
+import { supabase } from './lib/supabase';
 
 const Stack = createNativeStackNavigator();
 
@@ -17,7 +19,7 @@ function SplashScreen({ navigation }) {
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        navigation.replace('Home');
+        navigation.replace('AdhesionForm'); 
       } else {
         navigation.replace('Login');
       }
@@ -41,7 +43,8 @@ export default function App() {
         <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen name="Register" component={RegisterScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="EmailResetRequest" component={EmailResetRequestScreen} /> 
+        <Stack.Screen name="EmailResetRequest" component={EmailResetRequestScreen} />
+        <Stack.Screen name="AdhesionForm" component={AdhesionFormScreen} /> 
       </Stack.Navigator>
     </NavigationContainer>
   );

@@ -7,7 +7,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { supabase } from '../supabase';
+import { supabase } from '../lib/supabase';
 import { useNavigation } from '@react-navigation/native';
 
 export default function HomeScreen() {
@@ -54,7 +54,7 @@ export default function HomeScreen() {
     if (error) {
       Alert.alert('Erreur', error.message);
     } else {
-      navigation.navigate('Login');
+      navigation.replace('Login');
     }
   };
 

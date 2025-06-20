@@ -11,7 +11,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { supabase } from '../supabase';
+import { supabase } from '../lib/supabase';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -21,70 +21,71 @@ export default function LoginScreen() {
 
   const navigation = useNavigation();
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      alert('Merci de remplir email et mot de passe');
+const handleLogin = async () => {
+  if (!email || !password) {
+    alert('Merci de remplir email et mot de passe');
+    return;
+  }
+
+  try {
+    setLoading(true);
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    setLoading(false);
+
+    if (error) {
+      alert('Erreur: ' + error.message);
       return;
     }
 
-    try {
-      setLoading(true);
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      setLoading(false);
+    alert('Bienvenue !');
 
-      if (error) {
-        alert('Erreur: ' + error.message);
-        return;
-      }
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
 
-      alert('Bienvenue !');
-
-      const { data: { session } } = await supabase.auth.getSession();
-      const user = session?.user;
-
-      if (!user) {
-        alert('Utilisateur non connecté');
-        return;
-      }
-
-      // Vérifie si un profil existe déjà
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-
-      if (profileError && profileError.code !== 'PGRST116') {
-        alert('Erreur lors de la vérification du profil : ' + profileError.message);
-        return;
-      }
-
-      // Si profil inexistant, on l’insère avec les infos du user_metadata
-      if (!profile) {
-        const { name = '', number = '' } = user.user_metadata || {};
-
-        const { error: insertError } = await supabase.from('profiles').insert({
-          id: user.id,
-          email: user.email,
-          name,
-          number,
-        });
-
-        if (insertError) {
-          alert('Erreur lors de la création du profil : ' + insertError.message);
-          return;
-        }
-      }
-
-      navigation.replace('Home');
-    } catch (e) {
-      setLoading(false);
-      alert('Erreur inattendue: ' + e.message);
+    if (!user) {
+      alert('Utilisateur non connecté');
+      return;
     }
-  };
+
+    // Vérifie si un profil existe déjà via auth_id (UUID)
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('auth_id', user.id)  // <-- MODIF ici
+      .single();
+
+    // Gestion d'erreur autre que absence de profil
+    if (profileError && profileError.code !== 'PGRST116') {
+      alert('Erreur lors de la vérification du profil : ' + profileError.message);
+      return;
+    }
+
+    // Si profil inexistant, on l’insère avec les infos du user_metadata
+    if (!profile) {
+      const { name = '', number = '' } = user.user_metadata || {};
+
+      const { error: insertError } = await supabase.from('profiles').insert({
+        auth_id: user.id,  
+        email: user.email,
+        name,
+        number,
+      });
+
+      if (insertError) {
+        alert('Erreur lors de la création du profil : ' + insertError.message);
+        return;
+      }
+    }
+
+    navigation.replace('AdhesionForm');
+  } catch (e) {
+    setLoading(false);
+    alert('Erreur inattendue: ' + e.message);
+  }
+};
 
   return (
     <KeyboardAvoidingView

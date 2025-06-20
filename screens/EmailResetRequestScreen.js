@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, TextInput, Text, TouchableOpacity, Alert, StyleSheet } from 'react-native';
-import { supabase } from '../supabase';
+import { supabase } from '../lib/supabase';
 
 export default function EmailResetRequestScreen({ navigation }) {
   const [email, setEmail] = useState('');
@@ -15,7 +15,7 @@ export default function EmailResetRequestScreen({ navigation }) {
     setLoading(true);
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: 'https://gp-express-reset-mdp.netlify.app/reset-password.html',
+      redirectTo: 'https://gp-express-function-link.netlify.app/reset-password.html',
     });
 
     setLoading(false);
