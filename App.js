@@ -9,8 +9,10 @@ import LoginScreen from './screens/LoginScreen';
 import HomeScreen from './screens/HomeScreen';
 import EmailResetRequestScreen from './screens/EmailResetRequestScreen';
 import AdhesionFormScreen from './screens/AdhesionFormScreen'; // ✅ Ajouté
-import SuccessScreen from './screens/SuccessScreen';
+import AnnonceScreen from './screens/AnnonceScreen';
 import WaitingValidationScreen from './screens/WaitingValidationScreen';
+import AnnonceDetailScreen from './screens/AnnonceDetailScreen';
+import EditAnnonceScreen from './screens/EditAnnonceScreen';
 
 
 import { supabase } from './lib/supabase';
@@ -48,8 +50,10 @@ export default function App() {
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="EmailResetRequest" component={EmailResetRequestScreen} />
         <Stack.Screen name="AdhesionForm" component={AdhesionFormScreen} /> 
-        <Stack.Screen name="Success" component={SuccessScreen} />
+        <Stack.Screen name="Annonce" component={AnnonceScreen} />
         <Stack.Screen name="WaitingValidation" component={WaitingValidationScreen} />
+        <Stack.Screen name="AnnonceDetail" component={AnnonceDetailScreen} />
+        <Stack.Screen name="EditAnnonce" component={EditAnnonceScreen} />
 
       </Stack.Navigator>
     </NavigationContainer>

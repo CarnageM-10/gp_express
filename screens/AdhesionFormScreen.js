@@ -225,17 +225,20 @@ const handleSubmit = async () => {
     return;
   }
 
+  if (!hasSigned) {
+    Alert.alert('Erreur', 'Veuillez lire et signer le contrat.');
+    return;
+  }
+
   try {
     const userFolderName = `${userName.trim().replace(/\s+/g, '_')}-${userEmail.trim().replace(/\s+/g, '_')}`;
 
-    // Upload fichiers ...
-    // ...
+    // Upload fichiers passeport, logement, statut
+    const passportUrls = await uploadMultipleFiles(passportFiles, 'passport', userFolderName);
+    const housingUrls = await uploadMultipleFiles(housingFiles, 'housing', userFolderName);
+    const statusUrls = await uploadMultipleFiles(statusFiles, 'status', userFolderName);
 
-    if (!hasSigned) {
-      Alert.alert('Erreur', 'Veuillez lire et signer le contrat.');
-      return;
-    }
-
+    // Upload contrat PDF signé
     const contractUrl = await uploadContractPDF(userFolderName, userName, userEmail);
     if (!contractUrl) {
       Alert.alert('Erreur', 'Erreur lors de l\'upload du contrat signé.');
@@ -249,6 +252,7 @@ const handleSubmit = async () => {
       return;
     }
 
+    // Insertion dans la table adhesions avec toutes les URLs
     const { data, error } = await supabase
       .from('adhesions')
       .insert([{

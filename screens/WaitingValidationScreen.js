@@ -12,9 +12,15 @@ export default function WaitingValidationScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <Text style={styles.message}>
-        Merci pour votre envoi. {'\n'}
-        Revenez dans 24h pour que vos documents soient validés.
-      </Text>
+      Nous vous remercions pour l’envoi de vos documents.{'\n'}
+      Notre équipe procédera à leur vérification dans les prochaines 24 heures.{'\n'}
+      Nous vous invitons à revenir consulter le statut de votre dossier ultérieurement.{'\n'}
+      {'\n'}
+      Cordialement,{'\n'}
+      L'équipe GP Express
+    </Text>
+
+
       <Button title="Se déconnecter" onPress={handleLogout} />
     </View>
   );

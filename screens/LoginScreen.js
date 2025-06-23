@@ -99,7 +99,7 @@ const handleLogin = async () => {
       navigation.replace('WaitingValidation');
     } else if (adhesionData.is_validated === true) {
       // Dossier validé
-      navigation.replace('Success');
+      navigation.replace('Annonce');
     }
 
   } catch (e) {
