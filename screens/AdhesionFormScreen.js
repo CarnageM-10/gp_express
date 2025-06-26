@@ -408,11 +408,11 @@ const handleSubmit = async () => {
           </TouchableOpacity>
           <TouchableOpacity style={styles.sidebarItem}>
             <Image source={require('../assets/fast-delivery.png')} style={styles.sidebarIcon} />
-            <Text style={styles.sidebarText}>Suivi</Text>
+            <Text style={styles.sidebarText}>Suivi liraison</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.sidebarItem}>
-            <Image source={require('../assets/notif.png')} style={styles.sidebarIcon} />
-            <Text style={styles.sidebarText}>Messages</Text>
+            <Image source={require('../assets/chat.png')} style={styles.sidebarIcon} />
+            <Text style={styles.sidebarText}>Discussions</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.sidebarItem}>
             <Image source={require('../assets/user.png')} style={styles.sidebarIconProfil} />

@@ -432,12 +432,12 @@ export default function EditAnnonceScreen(props) {
 
           <TouchableOpacity style={styles.sidebarItem} onPress={() => navigation.navigate('Suivi')}>
             <Image source={require('../assets/fast-delivery.png')} style={styles.sidebarIcon} />
-            <Text style={styles.sidebarText}>Suivi</Text>
+            <Text style={styles.sidebarText}>Suivi livraison</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.sidebarItem} onPress={() => navigation.navigate('Messages')}>
-            <Image source={require('../assets/notif.png')} style={styles.sidebarIcon} />
-            <Text style={styles.sidebarText}>Messages</Text>
+            <Image source={require('../assets/chat.png')} style={styles.sidebarIcon} />
+            <Text style={styles.sidebarText}>Discussion</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.sidebarItem} onPress={() => navigation.navigate('Profil')}>

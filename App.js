@@ -13,7 +13,7 @@ import AnnonceScreen from './screens/AnnonceScreen';
 import WaitingValidationScreen from './screens/WaitingValidationScreen';
 import AnnonceDetailScreen from './screens/AnnonceDetailScreen';
 import EditAnnonceScreen from './screens/EditAnnonceScreen';
-
+import ProfileScreen from './screens/ProfileScreen';
 
 import { supabase } from './lib/supabase';
 
@@ -54,7 +54,7 @@ export default function App() {
         <Stack.Screen name="WaitingValidation" component={WaitingValidationScreen} />
         <Stack.Screen name="AnnonceDetail" component={AnnonceDetailScreen} />
         <Stack.Screen name="EditAnnonce" component={EditAnnonceScreen} />
-
+        <Stack.Screen name="Profile" component={ProfileScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

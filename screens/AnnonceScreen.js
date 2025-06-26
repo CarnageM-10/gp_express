@@ -15,7 +15,8 @@ import { Platform } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { Ionicons } from '@expo/vector-icons'; 
 import { useNavigation } from '@react-navigation/native';
-
+import Navbar from '../components/Navbar';
+import Sidebar from '../components/Sidebar';
 
 export default function CreateAnnonceScreen() {
   const [nomPrenom, setNomPrenom] = useState('');
@@ -130,9 +131,8 @@ const handlePublish = async () => {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
-      <Image source={require('../assets/logo.png')} style={styles.logo} />
-      <Image source={require('../assets/gp_image.png')} style={styles.gp_image} />
-
+      <Navbar />
+       <Image source={require('../assets/gp_image.png')} style={styles.gp_image} />
 
     <View style={styles.headerWrapper}>
       <Text style={styles.title}>Créer une annonce</Text>
@@ -330,51 +330,12 @@ const handlePublish = async () => {
 
 
       {/* BARRE DE NAVIGATION BAS */}
-      <View style={styles.sidebarWrapper}>
-        <View style={styles.sidebar}>
-          <TouchableOpacity
-            style={styles.sidebarItem}
-            onPress={() => navigation.navigate('AnnonceDetail')}
-          >
-            <Image source={require('../assets/truck.png')} style={styles.sidebarIcon} />
-            <Text style={styles.sidebarText}>Annonces</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.sidebarItem}>
-            <Image source={require('../assets/fast-delivery.png')} style={styles.sidebarIcon} />
-            <Text style={styles.sidebarText}>Suivi</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.sidebarItem}>
-            <Image source={require('../assets/notif.png')} style={styles.sidebarIcon} />
-            <Text style={styles.sidebarText}>Messages</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.sidebarItem} onPress={() => navigation.navigate('Home')}>
-            <Image source={require('../assets/user.png')} style={styles.sidebarIconProfil} />
-            <Text style={styles.sidebarText}>Profil</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      <Sidebar />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  logo: {
-    width: 170,
-    height: 170,
-    resizeMode: 'contain',
-    alignSelf: 'flex-end',
-    marginRight: 10,
-  },
-  gp_image: {
-    position: 'absolute',
-    top: 120,
-    left: 0,
-    right: 0,
-    width: '100%',
-    height: 230,
-    resizeMode: 'cover',
-  },
-
   formWrapper: {
     backgroundColor: '#fff',
     padding: 20,
@@ -403,11 +364,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     paddingHorizontal: 20,
     paddingBottom: 6,
-    paddingTop: 20,  // regroupe paddingTop: 10 + 20 (le dernier écrase l'autre)
+    paddingTop: 18,  
     borderBottomWidth: 0,
     position: 'relative',
     zIndex: 10,
-    marginTop: 55,
+    marginTop: 100,
   },
   title: {
     fontSize: 22,
@@ -503,40 +464,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  sidebarWrapper: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: 'rgba(15, 15, 15, 0.2)',
-    borderTopLeftRadius: 13,
-    borderTopRightRadius: 13,
-    overflow: 'hidden',
-    position: 'absolute',
-    bottom: 0,
-    width: '100%',
-  },
-  sidebar: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 12,
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 15,
-    borderTopRightRadius: 15,
-  },
-  sidebarItem: {
-    alignItems: 'center',
-  },
-  sidebarIcon: {
-    width: 32,
-    height: 32,
-  },
-  sidebarIconProfil: {
-    width: 38,
-    height: 38,
-  },
-  sidebarText: {
-    fontSize: 14,
-    marginTop: 4,
-  },
 
   input: {
     flex: 1,
@@ -572,6 +499,15 @@ const styles = StyleSheet.create({
   pickerItem: {
     fontSize: 14,
     color: '#000',
+  },
+  gp_image: {
+    position: 'absolute',
+    top: 110,
+    left: 0,
+    right: 0,
+    width: '100%',
+    height: 230,
+    resizeMode: 'cover',
   },
 });
 

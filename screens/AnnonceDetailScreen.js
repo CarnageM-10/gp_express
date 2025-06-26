@@ -5,6 +5,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
+import Navbar from '../components/Navbar';
+import Sidebar from '../components/Sidebar';
 
 export default function AnnonceDetailScreen({ navigation }) {
   const [annonces, setAnnonces] = useState([]);
@@ -72,12 +74,7 @@ export default function AnnonceDetailScreen({ navigation }) {
   return (
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
       {/* header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Image source={require('../assets/left.png')} style={styles.leftIcon} />
-        </TouchableOpacity>
-        <Image source={require('../assets/logo.png')} style={styles.logo} />
-      </View>
+      <Navbar />
 
       {/* annonces */}
       <ScrollView contentContainerStyle={styles.scrollContainer}>
@@ -132,29 +129,7 @@ export default function AnnonceDetailScreen({ navigation }) {
       </ScrollView>
 
       {/* barre navigation bas */}
-      <View style={styles.sidebarWrapper}>
-        <View style={styles.sidebar}>
-          <TouchableOpacity style={styles.sidebarItem}>
-            <Image source={require('../assets/truck.png')} style={styles.sidebarIcon}onPress={() => navigation.navigate('Annonce')} />
-            <Text style={styles.sidebarText}>Accueil</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.sidebarItem}>
-            <Image source={require('../assets/fast-delivery.png')} style={styles.sidebarIcon} />
-            <Text style={styles.sidebarText}>Suivi</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.sidebarItem}>
-            <Image source={require('../assets/notif.png')} style={styles.sidebarIcon} />
-            <Text style={styles.sidebarText}>Messages</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.sidebarItem }onPress={() => navigation.navigate('Home')}>
-            <Image source={require('../assets/user.png')} style={styles.sidebarIconProfil} />
-            <Text style={styles.sidebarText}>Profil</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      <Sidebar />
     </View>
   );
 }
