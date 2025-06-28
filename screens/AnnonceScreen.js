@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
+import { translate } from '../translations'; 
+import { useLanguage } from '../context/LanguageContext';
+
 
 export default function CreateAnnonceScreen() {
   const [nomPrenom, setNomPrenom] = useState('');
@@ -37,7 +40,42 @@ export default function CreateAnnonceScreen() {
   const [showDatePickerArrivee, setShowDatePickerArrivee] = useState(false); 
   const [pickerVisible, setPickerVisible] = useState(false);
   const navigation = useNavigation();
+  const { language, changeLanguage  } = useLanguage();
+  const [isLoading, setIsLoading] = useState(true);
+  
+useEffect(() => {
+  async function fetchUserLanguage(userId) {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('language')
+      .eq('auth_id', userId)
+      .single();
 
+    if (error) {
+      console.log('Erreur récupération langue:', error.message);
+    }
+
+    if (data?.language) {
+      changeLanguage(data.language);
+    }
+
+    setIsLoading(false); // ✅ Fin du chargement même en cas d'erreur
+  }
+
+  async function getUserAndLang() {
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (user) {
+      await fetchUserLanguage(user.id);
+    } else {
+      setIsLoading(false); // ✅ Utilisateur non connecté
+    }
+  }
+
+  getUserAndLang();
+}, []);
+
+
+  
 
   const formatDate = (date) => {
     const d = new Date(date);
@@ -135,7 +173,7 @@ const handlePublish = async () => {
        <Image source={require('../assets/gp_image.png')} style={styles.gp_image} />
 
     <View style={styles.headerWrapper}>
-      <Text style={styles.title}>Créer une annonce</Text>
+      <Text style={styles.title}>{translate('Créer une annonce', language)}</Text>
       <View style={styles.titleUnderline} />
     </View>
 
@@ -143,9 +181,9 @@ const handlePublish = async () => {
     {/* Ton formulaire */}
     <View style={[styles.formWrapper, { width: '100%' }]}>
       
-      <Text style={styles.label}>Nom & Prénom</Text>
+      <Text style={styles.label}>{translate('Nom & Prénom', language)}</Text>
       <TextInput
-        placeholder="Entrer votre nom & prénom"
+        placeholder={translate("Entrer votre nom & prénom", language)}
         placeholderTextColor="#E0DADA"
         style={styles.lineInput}
         value={nomPrenom}
@@ -154,10 +192,10 @@ const handlePublish = async () => {
 
       <View style={styles.rowGroup}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.label}>Date de départ</Text>
+          <Text style={styles.label}>{translate('Date de départ', language)}</Text>
           <TouchableOpacity onPress={() => setShowDatePickerDepart(true)}>
             <TextInput
-              placeholder="JJ/MM/AA"
+              placeholder={translate("JJ/MM/AA", language)}
               style={styles.boxInput}
               value={dateDepart}
               editable={false}
@@ -182,10 +220,10 @@ const handlePublish = async () => {
         <Text style={styles.separatordate}>/</Text>
 
         <View style={{ flex: 1 }}>
-          <Text style={styles.label}>Date d'arrivée</Text>
+          <Text style={styles.label}>{translate("Date d'arrivée", language)}</Text>
           <TouchableOpacity onPress={() => setShowDatePickerArrivee(true)}>
             <TextInput
-              placeholder="JJ/MM/AA"
+              placeholder={translate("JJ/MM/AA", language)}
               style={styles.boxInput}
               value={dateArrivee}
               editable={false}
@@ -209,13 +247,13 @@ const handlePublish = async () => {
       </View>
 
       <View style={styles.rowGrouptext}>
-        <Text style={styles.label}>Ville de départ</Text>
-        <Text style={styles.label}>Ville d'arrivée</Text>
+        <Text style={styles.label}>{translate('Ville de départ', language)}</Text>
+        <Text style={styles.label}>{translate("Ville d'arrivée", language)}</Text>
       </View>
 
       <View style={styles.rowGroup}>
         <TextInput
-          placeholder="Ville de départ"
+          placeholder={translate("Ville de départ", language)}
           placeholderTextColor="#E0DADA"
           style={styles.lineInput}
           value={villeDepart}
@@ -223,7 +261,7 @@ const handlePublish = async () => {
         />
         <Text style={styles.separator}>/</Text>
         <TextInput
-          placeholder="Ville d'arrivée"
+          placeholder={translate("Ville d'arrivée", language)}
           placeholderTextColor="#E0DADA"
           style={styles.lineInput}
           value={villeArrivee}
@@ -231,10 +269,10 @@ const handlePublish = async () => {
         />
       </View>
 
-      <Text style={styles.label}>Date limite de dépôt</Text>
+      <Text style={styles.label}>{translate('Date limite de dépôt', language)}</Text>
       <TouchableOpacity onPress={() => setShowDatePickerLimite(true)}>
         <TextInput
-          placeholder="JJ/MM/AA"
+          placeholder={translate("JJ/MM/AA", language)}
           style={styles.boxInput}
           value={dateLimiteDepot}
           editable={false}
@@ -255,24 +293,24 @@ const handlePublish = async () => {
         />
       )}
 
-      <Text style={styles.label}>Adresse</Text>
+      <Text style={styles.label}>{translate('Adresse', language)}</Text>
       <View style={styles.rowGroup}>
         <TextInput
-          placeholder="Pays"
+          placeholder={translate("Pays", language)}
           placeholderTextColor="#E0DADA"
           style={styles.addressInput}
           value={adressePays}
           onChangeText={setAdressePays}
         />
         <TextInput
-          placeholder="Ville"
+          placeholder={translate("Ville", language)}
           placeholderTextColor="#E0DADA"
           style={styles.addressInput}
           value={adresseVille}
           onChangeText={setAdresseVille}
         />
         <TextInput
-          placeholder="Rue"
+          placeholder={translate("Rue", language)}
           placeholderTextColor="#E0DADA"
           style={styles.addressInput}
           value={adresseRue}
@@ -280,7 +318,7 @@ const handlePublish = async () => {
         />
       </View>
 
-      <Text style={styles.label}>Poids & Prix</Text>
+      <Text style={styles.label}>{translate('Poids & Prix', language)}</Text>
       <View style={styles.rowGroup}>
         <TextInput
           placeholder="0 - 100kg"
@@ -291,7 +329,7 @@ const handlePublish = async () => {
         />
         <Text style={styles.separator}>/</Text>
         <TextInput
-          placeholder="Prix"
+          placeholder={translate("Prix", language)}
           value={price !== '' && !isNaN(parseFloat(price)) ? parseFloat(price).toFixed(2) : ''}
           onChangeText={(text) => setPrice(text)}
           keyboardType="numeric"
@@ -322,7 +360,7 @@ const handlePublish = async () => {
       </View>
 
       <TouchableOpacity style={styles.publishButton} onPress={handlePublish}>
-        <Text style={styles.publishText}>Publier</Text>
+        <Text style={styles.publishText}>{translate('Publier', language)}</Text>
       </TouchableOpacity>
 
     </View>
@@ -330,7 +368,7 @@ const handlePublish = async () => {
 
 
       {/* BARRE DE NAVIGATION BAS */}
-      <Sidebar />
+      <Sidebar language={language} />
     </View>
   );
 }
@@ -502,7 +540,7 @@ const styles = StyleSheet.create({
   },
   gp_image: {
     position: 'absolute',
-    top: 110,
+    top: 100,
     left: 0,
     right: 0,
     width: '100%',

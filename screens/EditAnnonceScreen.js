@@ -14,6 +14,10 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { StyleSheet } from 'react-native';
+import { translate } from '../translations'; 
+import { useLanguage } from '../context/LanguageContext';
+import Navbar from '../components/Navbar';
+import Sidebar from '../components/Sidebar';
 
 
 export default function EditAnnonceScreen(props) {
@@ -37,6 +41,8 @@ export default function EditAnnonceScreen(props) {
   const navigation = useNavigation();
   const route = useRoute();
   const { annonceId, annonceUserId } = route.params || {};
+  const { language, changeLanguage  } = useLanguage();
+  
 
   const conversionRates = {
     'CFA': 1,               // Franc CFA (XOF)
@@ -74,60 +80,72 @@ export default function EditAnnonceScreen(props) {
   };
 
   useEffect(() => {
-    if (annonceId && annonceUserId) {
-      const fetchAnnonce = async () => {
-        setIsLoading(true);
-        console.log('🔄 Chargement des données pour l’annonce', annonceId, annonceUserId);
+    const fetchAllData = async () => {
+      setIsLoading(true);
 
-        const { data, error } = await supabase
-          .from('annonces')
-          .select('*')
-          .eq('id', annonceId)
-          .eq('user_id', annonceUserId)
-          .single();
+      try {
+        // 🔑 Récupération de l'utilisateur
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
 
-        if (error) {
-          console.error('❌ Erreur chargement annonce :', error);
-          Alert.alert('Erreur', 'Impossible de charger l’annonce: ' + error.message);
-          navigation.goBack();
-        } else if (data) {
-          console.log('✅ Données récupérées :', data);
-
-          setNomPrenom(data.nom_prenom || '');
-          setDateDepart(formatDateToDisplay(data.date_depart));
-          setDateArrivee(formatDateToDisplay(data.date_arrivee));
-          setVilleDepart(data.ville_depart || '');
-          setVilleArrivee(data.ville_arrivee || '');
-          setDateLimiteDepot(formatDateToDisplay(data.date_limite_depot));
-          setAdressePays(data.adresse_pays || '');
-          setAdresseVille(data.adresse_ville || '');
-          setAdresseRue(data.adresse_rue || '');
-          setPoids(data.poids_max_kg?.toString() || '');
-          setPrice(data.prix_valeur?.toString() || '');
-          setSelectedDevise(data.prix_devise || 'CFA');
-
-          // 🔍 Vérification de la mise à jour des états
-          console.log('🎯 États mis à jour :', {
-            nomPrenom,
-            dateDepart,
-            dateArrivee,
-            villeDepart,
-            villeArrivee,
-            dateLimiteDepot,
-            adressePays,
-            adresseVille,
-            adresseRue,
-            poids,
-            price,
-            selectedDevise,
-          });
+        if (userError || !user) {
+          console.log('❌ Erreur récupération utilisateur :', userError?.message);
+          setIsLoading(false);
+          return;
         }
 
-        setIsLoading(false);
-      };
+        // 🌐 Récupération de la langue
+        const { data: langData, error: langError } = await supabase
+          .from('profiles')
+          .select('language')
+          .eq('auth_id', user.id)
+          .single();
 
-      fetchAnnonce();
-    }
+        if (langError) {
+          console.log('❌ Erreur récupération langue :', langError.message);
+        } else if (langData?.language) {
+          changeLanguage(langData.language);
+        }
+
+        // 📦 Récupération de l’annonce si les IDs sont valides
+        if (annonceId && annonceUserId) {
+          console.log('🔄 Chargement des données pour l’annonce', annonceId, annonceUserId);
+
+          const { data: annonceData, error: annonceError } = await supabase
+            .from('annonces')
+            .select('*')
+            .eq('id', annonceId)
+            .eq('user_id', annonceUserId)
+            .single();
+
+          if (annonceError) {
+            console.error('❌ Erreur chargement annonce :', annonceError);
+            Alert.alert('Erreur', 'Impossible de charger l’annonce: ' + annonceError.message);
+            navigation.goBack();
+          } else if (annonceData) {
+            console.log('✅ Données récupérées :', annonceData);
+
+            setNomPrenom(annonceData.nom_prenom || '');
+            setDateDepart(formatDateToDisplay(annonceData.date_depart));
+            setDateArrivee(formatDateToDisplay(annonceData.date_arrivee));
+            setVilleDepart(annonceData.ville_depart || '');
+            setVilleArrivee(annonceData.ville_arrivee || '');
+            setDateLimiteDepot(formatDateToDisplay(annonceData.date_limite_depot));
+            setAdressePays(annonceData.adresse_pays || '');
+            setAdresseVille(annonceData.adresse_ville || '');
+            setAdresseRue(annonceData.adresse_rue || '');
+            setPoids(annonceData.poids_max_kg?.toString() || '');
+            setPrice(annonceData.prix_valeur?.toString() || '');
+            setSelectedDevise(annonceData.prix_devise || 'CFA');
+          }
+        }
+      } catch (err) {
+        console.error('❌ Erreur inattendue :', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchAllData();
   }, [annonceId, annonceUserId]);
 
 
@@ -194,18 +212,12 @@ export default function EditAnnonceScreen(props) {
   }
   return (
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Image source={require('../assets/left.png')} style={styles.leftIcon} />
-        </TouchableOpacity>
-        <Image source={require('../assets/logo.png')} style={styles.logo} />
-        <Image source={require('../assets/gp_image.png')} style={styles.gp_image} />
-      </View>
+      {/* Header */}        
+      <Navbar/>
       <View style={styles.container}>
       {/* Header fixe */}
       <View style={styles.headerContainer}>
-        <Text style={styles.headerText}>Modifier l'annonce</Text>
+        <Text style={styles.headerText}>{translate("Modifier l'annonce", language)}</Text>
         <View style={styles.headerBar} />
       </View>
 
@@ -213,12 +225,12 @@ export default function EditAnnonceScreen(props) {
 
   {/* Nom et prénom */}
   <View style={{ marginBottom: 20 }}>
-    <Text style={styles.label}>Nom et Prénom</Text>
+    <Text style={styles.label}>{translate('Nom & Prénom', language)}</Text>
     <TextInput
       value={nomPrenom}
       onChangeText={setNomPrenom}
       style={styles.input}
-      placeholder="Nom et Prénom"
+      placeholder={translate('Nom & Prénom', language)}
       placeholderTextColor="#999"
     />
   </View>
@@ -226,25 +238,25 @@ export default function EditAnnonceScreen(props) {
   {/* Ligne Date départ / Date arrivée */}
     <View style={styles.row}>
       <View style={styles.column}>
-        <Text style={styles.label}>Date de départ</Text>
+        <Text style={styles.label}>{translate('Date de départ', language)}</Text>
         <TouchableOpacity onPress={() => setShowDatePickerDepart(true)}>
           <TextInput
             editable={false}
             value={dateDepart}
             style={styles.inputGrayRect}
-            placeholder="JJ/MM/AAAA"
+            placeholder={translate("JJ/MM/AAAA", language)}
             placeholderTextColor="#999"
           />
         </TouchableOpacity>
       </View>
       <View style={styles.column}>
-        <Text style={styles.label}>Date d’arrivée</Text>
+        <Text style={styles.label}>{translate('Date d’arrivée', language)}</Text>
         <TouchableOpacity onPress={() => setShowDatePickerArrivee(true)}>
           <TextInput
             editable={false}
             value={dateArrivee}
             style={styles.inputGrayRect}
-            placeholder="JJ/MM/AAAA"
+            placeholder={translate("JJ/MM/AAAA", language)}
             placeholderTextColor="#999"
           />
         </TouchableOpacity>
@@ -255,35 +267,35 @@ export default function EditAnnonceScreen(props) {
   
   <View style={styles.row}>
     <View style={styles.column}>
-      <Text style={styles.label}>Ville de départ</Text>
+      <Text style={styles.label}>{translate('Ville de départ', language)}</Text>
       <TextInput
         value={villeDepart}
         onChangeText={setVilleDepart}
         style={styles.inputGrayRect}
-        placeholder="Ville de départ"
+        placeholder={translate("Ville de départ", language)}
         placeholderTextColor="#999"
       />
     </View>
     <View style={styles.column}>
-      <Text style={styles.label}>Ville d’arrivée</Text>
+      <Text style={styles.label}>{translate("Ville d’arrivée", language)}</Text>
       <TextInput
         value={villeArrivee}
         onChangeText={setVilleArrivee}
         style={styles.inputGrayRect}
-        placeholder="Ville d’arrivée"
+        placeholder={translate("Ville d’arrivée", language)}
         placeholderTextColor="#999"
       />
     </View>
   </View>
 
     {/* Date limite de dépôt */}
-    <Text style={styles.label}>Date limite de dépôt</Text>
+    <Text style={styles.label}>{translate('Date limite de dépôt', language)}</Text>
     <TouchableOpacity onPress={() => setShowDatePickerLimite(true)}>
       <TextInput
         editable={false}
         value={dateLimiteDepot}
         style={styles.input}
-        placeholder="JJ/MM/AAAA"
+        placeholder={translate("JJ/MM/AAAA", language)}
         placeholderTextColor="#999"
       />
     </TouchableOpacity>
@@ -291,34 +303,34 @@ export default function EditAnnonceScreen(props) {
     {/* Adresse : Pays / Ville / Rue (en colonne) */}
     <View style={styles.rowpvr}>
   <View style={styles.field}>
-    <Text style={styles.label}>Pays</Text>
+    <Text style={styles.label}>{translate('Pays', language)}</Text>
     <TextInput
       value={adressePays}
       onChangeText={setAdressePays}
       style={styles.input}
-      placeholder="Pays"
+      placeholder={translate("Pays", language)}
       placeholderTextColor="#999"
     />
   </View>
 
   <View style={styles.field}>
-    <Text style={styles.label}>Ville</Text>
+    <Text style={styles.label}>{translate('Ville', language)}</Text>
     <TextInput
       value={adresseVille}
       onChangeText={setAdresseVille}
       style={styles.input}
-      placeholder="Ville"
+      placeholder={translate("Ville", language)}
       placeholderTextColor="#999"
     />
   </View>
 
   <View style={styles.field}>
-    <Text style={styles.label}>Rue</Text>
+    <Text style={styles.label}>{translate('Rue', language)}</Text>
     <TextInput
       value={adresseRue}
       onChangeText={setAdresseRue}
       style={styles.input}
-      placeholder="Rue"
+      placeholder={translate("Rue", language)}
       placeholderTextColor="#999"
     />
   </View>
@@ -326,7 +338,7 @@ export default function EditAnnonceScreen(props) {
 
 
     {/* Poids max kg */}
-    <Text style={styles.label}>Poids maximum (kg)</Text>
+    <Text style={styles.label}>{translate('Poids maximum (kg)', language)}</Text>
     <TextInput
       value={poids}
       onChangeText={setPoids}
@@ -337,13 +349,13 @@ export default function EditAnnonceScreen(props) {
 
     {/* Ligne Prix / Devise avec rectangle arrondi et séparé par / */}
       <View style={{ padding: 20 }}>
-      <Text style={styles.label}>Prix et Devise</Text>
+      <Text style={styles.label}>{translate('Prix et Devise', language)}</Text>
       <View style={styles.rowPriceDevise}>
         <TextInput
           value={price}
           onChangeText={setPrice}
           style={styles.inputRounded}
-          placeholder="Prix"
+          placeholder={translate("Prix", language)}
           placeholderTextColor="#999"
           keyboardType="numeric"
         />
@@ -415,38 +427,16 @@ export default function EditAnnonceScreen(props) {
 
 
     <TouchableOpacity style={styles.button} onPress={handleUpdate}>
-      <Text style={styles.buttonText}>Modifier</Text>
+      <Text style={styles.buttonText}>{translate('Modifier', language)}</Text>
     </TouchableOpacity>
 
   </ScrollView>
-
-    </View>
-
-      {/* Barre de navigation bottom (sidebar) */}
-      <View style={styles.sidebarWrapper}>
-        <View style={styles.sidebar}>
-          <TouchableOpacity style={styles.sidebarItem} onPress={() => navigation.navigate('Home')}>
-            <Image source={require('../assets/truck.png')} style={styles.sidebarIcon} />
-            <Text style={styles.sidebarText}>Accueil</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.sidebarItem} onPress={() => navigation.navigate('Suivi')}>
-            <Image source={require('../assets/fast-delivery.png')} style={styles.sidebarIcon} />
-            <Text style={styles.sidebarText}>Suivi livraison</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.sidebarItem} onPress={() => navigation.navigate('Messages')}>
-            <Image source={require('../assets/chat.png')} style={styles.sidebarIcon} />
-            <Text style={styles.sidebarText}>Discussion</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.sidebarItem} onPress={() => navigation.navigate('Profil')}>
-            <Image source={require('../assets/user.png')} style={styles.sidebarIconProfil} />
-            <Text style={styles.sidebarText}>Profil</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </View>
+  
+  </View>
+  
+  <Sidebar language={language} />
+  </View>
+  
     
   );
   

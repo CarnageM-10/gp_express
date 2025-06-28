@@ -16,7 +16,7 @@ import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
-import { translate } from '../translations'; // ← adapte ce chemin
+import { translate } from '../translations'; 
 
 const ProfileScreen = () => {
   const navigation = useNavigation();

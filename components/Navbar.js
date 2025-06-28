@@ -10,7 +10,7 @@ const Navbar = () => {
 
   return (
     <View style={styles.header}>
-      <TouchableOpacity onPress={() => navigation.goBack()}>
+      <TouchableOpacity onPress={() => navigation.navigate('Annonce')}>
         <Image
           source={require('../assets/left.png')}
           style={styles.leftIcon}

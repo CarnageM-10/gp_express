@@ -7,85 +7,113 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
+import { translate } from '../translations'; 
 
 export default function AnnonceDetailScreen({ navigation }) {
   const [annonces, setAnnonces] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [language, setLanguage] = useState('fr');
+  const [profile, setProfile] = useState(null);
+
+  // État mode sombre activé pour test
+  const [isDarkMode, setIsDarkMode] = useState(true);
+
+  // Couleurs dynamiques selon le mode
+  const colors = {
+    background: isDarkMode ? '#121212' : '#fff',
+    cardBackground: isDarkMode ? '#1E293B' : '#4095A4',
+    textPrimary: isDarkMode ? '#E0E0E0' : '#fff',
+    textSecondary: isDarkMode ? '#B0B0B0' : '#e0f7fa',
+    buttonEdit: isDarkMode ? '#3B82F6' : '#007bff',
+    buttonDelete: isDarkMode ? '#EF4444' : '#dc3545',
+    buttonBackground: isDarkMode ? '#2563EB' : '#4D90FE',
+  };
 
   useEffect(() => {
-    fetchAnnoncesByUser();
+    const loadData = async () => {
+      const dataProfile = await fetchProfileData();
+      if (dataProfile) {
+        setProfile(dataProfile);
+        setLanguage(dataProfile.language || 'fr');
+      } else {
+        setLanguage('fr');
+      }
+      await fetchAnnoncesByUser();
+      setLoading(false);
+    };
+    loadData();
   }, []);
+
+  const fetchProfileData = async () => {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) return null;
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('language')
+      .eq('auth_id', user.id)
+      .single();
+    if (error) return null;
+    return data;
+  };
 
   const fetchAnnoncesByUser = async () => {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
-      Alert.alert('Erreur', 'Utilisateur non connecté.');
-      setLoading(false);
+      Alert.alert(translate('Erreur', language), translate('Utilisateur non connecté.', language));
       return;
     }
-
     const { data, error } = await supabase
       .from('annonces')
       .select('*')
       .eq('user_id', user.id);
 
     if (error) {
-      Alert.alert('Erreur', error.message);
+      Alert.alert(translate('Erreur', language), error.message);
     } else {
       setAnnonces(data);
     }
-    setLoading(false);
   };
 
   const handleDelete = async (id) => {
     Alert.alert(
-        'Confirmation',
-        "Es-tu sûr de vouloir supprimer cette annonce ?",
-        [
+      translate('Confirmation', language),
+      translate("Es-tu sûr de vouloir supprimer cette annonce ?", language),
+      [
+        { text: translate('Annuler', language), style: 'cancel' },
         {
-            text: 'Annuler',
-            style: 'cancel',
-        },
-        {
-            text: 'Supprimer',
-            onPress: async () => {
+          text: translate('Supprimer', language),
+          onPress: async () => {
             const { error } = await supabase.from('annonces').delete().eq('id', id);
             if (error) {
-                Alert.alert('Erreur', error.message);
+              Alert.alert(translate('Erreur', language), error.message);
             } else {
-                // 🔥 Supprime localement l'annonce immédiatement
-                setAnnonces(prev => prev.filter(item => item.id !== id));
-
-                Alert.alert('Succès', "L'annonce a bien été supprimée");
-                
-                // (optionnel) Re-fetch pour être sûr de la synchro avec Supabase
-                // await fetchAnnoncesByUser();
+              setAnnonces(prev => prev.filter(item => item.id !== id));
+              Alert.alert(translate('Succès', language), translate("L'annonce a bien été supprimée", language));
             }
-            },
+          },
         },
-        ],
-        { cancelable: true }
+      ],
+      { cancelable: true }
     );
-    };
+  };
 
-
-  if (loading) return <ActivityIndicator style={{ flex: 1 }} />;
+  if (loading) return <ActivityIndicator style={{ flex: 1 }} color={colors.textPrimary} />;
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#fff' }}>
-      {/* header */}
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Navbar />
 
-      {/* annonces */}
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         {annonces.length === 0 ? (
-          <Text style={{ textAlign: 'center', marginTop: 20 }}>Aucune annonce trouvée.</Text>
+          <Text style={[styles.noAnnonceText, { color: colors.textPrimary }]}>
+            {translate('Aucune annonce trouvée.', language)}
+          </Text>
         ) : (
           annonces.map((annonce) => (
-            <View key={annonce.id} style={styles.annonceCard}>
+            <View key={annonce.id} style={[styles.annonceCard, { backgroundColor: colors.cardBackground }]}>
               <View style={styles.userHeader}>
                 <Image source={require('../assets/userlogo.png')} style={styles.userLogo} />
-                <Text style={styles.userName}>{annonce.nom_prenom}</Text>
+                <Text style={[styles.userName, { color: colors.textPrimary }]}>{annonce.nom_prenom}</Text>
               </View>
 
               <View style={styles.annonceContent}>
@@ -95,15 +123,17 @@ export default function AnnonceDetailScreen({ navigation }) {
                   'poids_max_kg', 'prix_valeur', 'prix_devise'
                 ].map(key => (
                   <View key={key} style={styles.row}>
-                    <Text style={styles.label}>{key.replace(/_/g, ' ')} :</Text>
-                    <Text style={styles.value}>{annonce[key]}</Text>
+                    <Text style={[styles.label, { color: colors.textSecondary }]}>{translate(key.replace(/_/g, ' '), language)} :</Text>
+                    <Text style={[styles.value, { color: colors.textPrimary }]}>
+                      {translate(annonce[key]?.toString() || '', language)}
+                    </Text>
                   </View>
                 ))}
               </View>
 
               <View style={styles.buttons}>
                 <TouchableOpacity
-                  style={styles.button}
+                  style={[styles.button, { backgroundColor: colors.buttonEdit }]}
                   onPress={() =>
                     navigation.navigate('EditAnnonce', {
                       annonceId: annonce.id,
@@ -112,15 +142,15 @@ export default function AnnonceDetailScreen({ navigation }) {
                   }
                 >
                   <Ionicons name="create-outline" size={20} color="#fff" style={{ marginRight: 6 }} />
-                  <Text style={styles.btnText}>Modifier</Text>
+                  <Text style={styles.btnText}>{translate('Modifier', language)}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={[styles.btn, styles.deleteBtn]}
+                  style={[styles.button, { backgroundColor: colors.buttonDelete }]}
                   onPress={() => handleDelete(annonce.id)}
                 >
                   <Ionicons name="trash" size={20} color="#fff" />
-                  <Text style={styles.btnText}>Supprimer</Text>
+                  <Text style={styles.btnText}>{translate('Supprimer', language)}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -128,41 +158,24 @@ export default function AnnonceDetailScreen({ navigation }) {
         )}
       </ScrollView>
 
-      {/* barre navigation bas */}
-      <Sidebar />
+      <Sidebar language={language} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    paddingTop: 28, // ✅ ajouté pour faire descendre le header
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
+  container: {
+    flex: 1,
   },
-
-  leftIcon: {
-    width: 40,   // ✅ augmenté
-    height: 40,  // ✅ augmenté
-    resizeMode: 'contain',
-  },
-  logo: {
-    width: 200,  // ✅ légèrement augmenté
-    height: 60,  // ✅ légèrement augmenté
-    resizeMode: 'contain',
-  },
-
   scrollContainer: {
     padding: 16,
   },
+  noAnnonceText: {
+    textAlign: 'center',
+    marginTop: 20,
+    fontSize: 16,
+  },
   annonceCard: {
-    backgroundColor: '#4095A4',
     borderRadius: 12,
     padding: 16,
     marginBottom: 20,
@@ -179,7 +192,6 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   userName: {
-    color: '#fff',
     fontWeight: 'bold',
     fontSize: 16,
   },
@@ -192,12 +204,10 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   label: {
-    color: '#e0f7fa',
     fontWeight: '600',
     textTransform: 'capitalize',
   },
   value: {
-    color: '#fff',
     fontWeight: '400',
   },
   buttons: {
@@ -205,58 +215,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: 14,
   },
-  btn: {
+  button: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 6,
   },
-  editBtn: {
-    backgroundColor: '#007bff',
-  },
-  deleteBtn: {
-    backgroundColor: '#dc3545',
-  },
   btnText: {
     color: '#fff',
     marginLeft: 6,
     fontWeight: '600',
-  },
-  sidebarWrapper: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 13,
-    borderTopRightRadius: 13,
-    borderWidth: 1,
-    borderColor: 'rgba(15, 15, 15, 0.2)',
-    overflow: 'hidden',
-  },
-  sidebar: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 12,
-    backgroundColor: '#fff',
-  },
-  sidebarItem: {
-    alignItems: 'center',
-  },
-  sidebarIcon: {
-    width: 32,
-    height: 32,
-  },
-  sidebarIconProfil: {
-    width: 38,
-    height: 38,
-  },
-  sidebarText: {
-    fontSize: 14,
-    marginTop: 4,
-  },
-  button: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  backgroundColor: '#4D90FE',
-  padding: 10,
-  borderRadius: 5,
   },
 });
