@@ -8,16 +8,18 @@ import { supabase } from '../lib/supabase';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import { translate } from '../translations'; 
+import { useTheme } from '../context/ThemeContext';
 
 export default function AnnonceDetailScreen({ navigation }) {
+  const { themeMode } = useTheme();
+  const isDarkMode = themeMode === 'dark';
+  
   const [annonces, setAnnonces] = useState([]);
   const [loading, setLoading] = useState(true);
   const [language, setLanguage] = useState('fr');
   const [profile, setProfile] = useState(null);
-
-  // État mode sombre activé pour test
-  const [isDarkMode, setIsDarkMode] = useState(true);
-
+  
+  
   // Couleurs dynamiques selon le mode
   const colors = {
     background: isDarkMode ? '#121212' : '#fff',
@@ -27,6 +29,7 @@ export default function AnnonceDetailScreen({ navigation }) {
     buttonEdit: isDarkMode ? '#3B82F6' : '#007bff',
     buttonDelete: isDarkMode ? '#EF4444' : '#dc3545',
     buttonBackground: isDarkMode ? '#2563EB' : '#4D90FE',
+    tintColor: isDarkMode ? '#E0E0E0' : '#333333',
   };
 
   useEffect(() => {
@@ -44,17 +47,22 @@ export default function AnnonceDetailScreen({ navigation }) {
     loadData();
   }, []);
 
-  const fetchProfileData = async () => {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) return null;
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('language')
-      .eq('auth_id', user.id)
-      .single();
-    if (error) return null;
-    return data;
-  };
+const fetchProfileData = async () => {
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) return null;
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('language, theme')
+    .eq('auth_id', user.id)
+    .single();
+
+  if (error || !data) return null;
+
+  // Appliquer le thème
+  return data;
+};
+
 
   const fetchAnnoncesByUser = async () => {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -112,7 +120,11 @@ export default function AnnonceDetailScreen({ navigation }) {
           annonces.map((annonce) => (
             <View key={annonce.id} style={[styles.annonceCard, { backgroundColor: colors.cardBackground }]}>
               <View style={styles.userHeader}>
-                <Image source={require('../assets/userlogo.png')} style={styles.userLogo} />
+              <Image
+                source={require('../assets/userlogo.png')}
+                style={[styles.userLogo, { tintColor: colors.tintColor }]}
+              />
+
                 <Text style={[styles.userName, { color: colors.textPrimary }]}>{annonce.nom_prenom}</Text>
               </View>
 

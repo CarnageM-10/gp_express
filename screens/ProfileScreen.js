@@ -194,6 +194,7 @@ return (
               <Pressable
                 onPress={() => {
                   changeTheme('light');
+                  changeThemeInProfile('light');
                   setShowThemeOptions(false);
                 }}
               >
@@ -204,6 +205,7 @@ return (
               <Pressable
                 onPress={() => {
                   changeTheme('dark');
+                  changeThemeInProfile('dark');
                   setShowThemeOptions(false);
                 }}
               >

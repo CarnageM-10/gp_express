@@ -19,7 +19,7 @@ import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import { translate } from '../translations'; 
 import { useLanguage } from '../context/LanguageContext';
-
+import { useTheme } from '../context/ThemeContext';
 
 export default function CreateAnnonceScreen() {
   const [nomPrenom, setNomPrenom] = useState('');
@@ -38,44 +38,56 @@ export default function CreateAnnonceScreen() {
   const [showDatePickerLimite, setShowDatePickerLimite] = useState(false);
   const [showDatePickerDepart, setShowDatePickerDepart] = useState(false);
   const [showDatePickerArrivee, setShowDatePickerArrivee] = useState(false); 
-  const [pickerVisible, setPickerVisible] = useState(false);
   const navigation = useNavigation();
   const { language, changeLanguage  } = useLanguage();
   const [isLoading, setIsLoading] = useState(true);
-  
+  const { themeMode, setThemeMode } = useTheme();
+  const isDarkMode = themeMode === 'dark';  
+  const colors = {
+  background: isDarkMode ? '#1E1E1E' : '#fff',
+  text: isDarkMode ? '#fff' : '#000',
+  border: isDarkMode ? '#444' : '#E0DADA',
+  inputBackground: isDarkMode ? '#333' : '#EFF1F2',
+  cardBackground: isDarkMode ? '#2A2A2A' : '#fff',
+  subtleText: isDarkMode ? '#999' : '#C7CECF',
+  };
+  const styles = createStyles(colors);
+
 useEffect(() => {
-  async function fetchUserLanguage(userId) {
+  async function fetchUserSettings(userId) {
     const { data, error } = await supabase
       .from('profiles')
-      .select('language')
+      .select('language, theme')
       .eq('auth_id', userId)
       .single();
 
     if (error) {
-      console.log('Erreur récupération langue:', error.message);
+      console.log('Erreur récupération profil:', error.message);
     }
 
-    if (data?.language) {
-      changeLanguage(data.language);
+    if (data) {
+      console.log('Theme récupéré:', data.theme);
+      if (data.language) {
+        changeLanguage(data.language);
+      }
+      if (data.theme) {
+        setThemeMode(data.theme.toLowerCase()); // forcer en minuscules
+      }
     }
-
-    setIsLoading(false); // ✅ Fin du chargement même en cas d'erreur
+    setIsLoading(false);
   }
 
   async function getUserAndLang() {
-    const { data: { user }, error } = await supabase.auth.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (user) {
-      await fetchUserLanguage(user.id);
+      await fetchUserSettings(user.id);
     } else {
-      setIsLoading(false); // ✅ Utilisateur non connecté
+      setIsLoading(false);
     }
   }
 
   getUserAndLang();
 }, []);
-
-
-  
 
   const formatDate = (date) => {
     const d = new Date(date);
@@ -168,7 +180,7 @@ const handlePublish = async () => {
 };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#fff' }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       <Navbar />
        <Image source={require('../assets/gp_image.png')} style={styles.gp_image} />
 
@@ -184,7 +196,7 @@ const handlePublish = async () => {
       <Text style={styles.label}>{translate('Nom & Prénom', language)}</Text>
       <TextInput
         placeholder={translate("Entrer votre nom & prénom", language)}
-        placeholderTextColor="#E0DADA"
+        placeholderTextColor={isDarkMode ? '#BBB' : '#C7CECF'}
         style={styles.lineInput}
         value={nomPrenom}
         onChangeText={setNomPrenom}
@@ -196,6 +208,7 @@ const handlePublish = async () => {
           <TouchableOpacity onPress={() => setShowDatePickerDepart(true)}>
             <TextInput
               placeholder={translate("JJ/MM/AA", language)}
+              placeholderTextColor={isDarkMode ? '#BBB' : '#C7CECF'}
               style={styles.boxInput}
               value={dateDepart}
               editable={false}
@@ -224,6 +237,7 @@ const handlePublish = async () => {
           <TouchableOpacity onPress={() => setShowDatePickerArrivee(true)}>
             <TextInput
               placeholder={translate("JJ/MM/AA", language)}
+              placeholderTextColor={isDarkMode ? '#BBB' : '#C7CECF'}
               style={styles.boxInput}
               value={dateArrivee}
               editable={false}
@@ -254,7 +268,7 @@ const handlePublish = async () => {
       <View style={styles.rowGroup}>
         <TextInput
           placeholder={translate("Ville de départ", language)}
-          placeholderTextColor="#E0DADA"
+          placeholderTextColor={isDarkMode ? '#BBB' : '#C7CECF'}
           style={styles.lineInput}
           value={villeDepart}
           onChangeText={setVilleDepart}
@@ -262,7 +276,7 @@ const handlePublish = async () => {
         <Text style={styles.separator}>/</Text>
         <TextInput
           placeholder={translate("Ville d'arrivée", language)}
-          placeholderTextColor="#E0DADA"
+          placeholderTextColor={isDarkMode ? '#BBB' : '#C7CECF'}
           style={styles.lineInput}
           value={villeArrivee}
           onChangeText={setVilleArrivee}
@@ -273,6 +287,7 @@ const handlePublish = async () => {
       <TouchableOpacity onPress={() => setShowDatePickerLimite(true)}>
         <TextInput
           placeholder={translate("JJ/MM/AA", language)}
+          placeholderTextColor={isDarkMode ? '#BBB' : '#C7CECF'}
           style={styles.boxInput}
           value={dateLimiteDepot}
           editable={false}
@@ -330,6 +345,7 @@ const handlePublish = async () => {
         <Text style={styles.separator}>/</Text>
         <TextInput
           placeholder={translate("Prix", language)}
+          placeholderTextColor={isDarkMode ? '#BBB' : '#C7CECF'}
           value={price !== '' && !isNaN(parseFloat(price)) ? parseFloat(price).toFixed(2) : ''}
           onChangeText={(text) => setPrice(text)}
           keyboardType="numeric"
@@ -373,9 +389,10 @@ const handlePublish = async () => {
   );
 }
 
-const styles = StyleSheet.create({
+
+const createStyles = (colors) => StyleSheet.create({
   formWrapper: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
     padding: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -387,7 +404,6 @@ const styles = StyleSheet.create({
     paddingBottom: 90,
     paddingHorizontal: 0,
   },
-
   titleUnderline: {
     height: 4,
     backgroundColor: '#520056',
@@ -399,10 +415,10 @@ const styles = StyleSheet.create({
   },
   headerWrapper: {
     width: '100%',
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
     paddingHorizontal: 20,
     paddingBottom: 6,
-    paddingTop: 18,  
+    paddingTop: 18,
     borderBottomWidth: 0,
     position: 'relative',
     zIndex: 10,
@@ -411,23 +427,24 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: 'bold',
+    color: colors.text,
   },
-
   label: {
     marginTop: 20,
     fontSize: 16,
     fontWeight: '500',
+    color: colors.text,
   },
-
   lineInput: {
     flex: 1,
     borderBottomWidth: 1,
-    borderColor: '#E0DADA',
+    borderColor: colors.border,
     paddingVertical: 8,
     fontSize: 16,
+    color: colors.text,
   },
   boxInput: {
-    backgroundColor: '#EFF1F2',
+    backgroundColor: colors.inputBackground,
     padding: 10,
     marginTop: 5,
     borderRadius: 5,
@@ -449,44 +466,45 @@ const styles = StyleSheet.create({
     marginHorizontal: 6,
     fontWeight: 'bold',
     fontSize: 16,
-    color: '#C7CECF',
+    color: colors.subtleText,
   },
   separatordate: {
     marginHorizontal: 9,
     fontWeight: 'bold',
     fontSize: 16,
-    color: '#C7CECF',
+    color: colors.subtleText,
     marginTop: 45,
   },
   addressInput: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#E0DADA',
+    borderColor: colors.border,
     borderRadius: 6,
     padding: 10,
     marginTop: 5,
-    backgroundColor: '#fff',
+    backgroundColor: colors.cardBackground,
+    color: colors.text,
   },
   roundInput: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#E0DADA',
+    borderColor: colors.border,
     borderRadius: 15,
     padding: 10,
     marginTop: 5,
-    backgroundColor: '#fff',
+    backgroundColor: colors.cardBackground,
+    color: colors.text,
   },
-
   roundInputkg: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#E0DADA',
+    borderColor: colors.border,
     borderRadius: 100,
     padding: 10,
     marginTop: 5,
-    backgroundColor: '#fff',
+    backgroundColor: colors.cardBackground,
+    color: colors.text,
   },
-
   publishButton: {
     backgroundColor: '#4095A4',
     paddingVertical: 12,
@@ -496,38 +514,36 @@ const styles = StyleSheet.create({
     marginTop: 30,
     alignSelf: 'center',
   },
-
   publishText: {
-    color: 'black',
+    color: colors.text,
     fontSize: 16,
     fontWeight: '600',
   },
-
   input: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#E0DADA',
+    borderColor: colors.border,
     borderRadius: 15,
     paddingVertical: 10,
     paddingHorizontal: 15,
     marginTop: 5,
-    backgroundColor: '#fff',
+    backgroundColor: colors.cardBackground,
     fontSize: 14,
+    color: colors.text,
   },
-
   devise: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: colors.border,
     borderRadius: 20,
     paddingHorizontal: 14,
-    backgroundColor: '#fff',
+    backgroundColor: colors.cardBackground,
     width: 120,
   },
   deviseText: {
     fontSize: 10,
-    color: '#000',
+    color: colors.text,
     flex: 1,
   },
   picker: {
@@ -536,7 +552,7 @@ const styles = StyleSheet.create({
   },
   pickerItem: {
     fontSize: 14,
-    color: '#000',
+    color: colors.text,
   },
   gp_image: {
     position: 'absolute',
@@ -548,4 +564,3 @@ const styles = StyleSheet.create({
     resizeMode: 'cover',
   },
 });
-

@@ -18,6 +18,7 @@ import { translate } from '../translations';
 import { useLanguage } from '../context/LanguageContext';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
+import { useTheme } from '../context/ThemeContext';
 
 
 export default function EditAnnonceScreen(props) {
@@ -42,6 +43,25 @@ export default function EditAnnonceScreen(props) {
   const route = useRoute();
   const { annonceId, annonceUserId } = route.params || {};
   const { language, changeLanguage  } = useLanguage();
+  const { themeMode, changeTheme } = useTheme();
+  const isDarkMode = themeMode === 'dark'; 
+  const colors = {
+  background: isDarkMode ? '#1E1E1E' : '#fff',
+  text: isDarkMode ? '#fff' : '#000',
+  border: isDarkMode ? '#444' : '#E0DADA',
+  inputBackground: isDarkMode ? '#333' : '#EFF1F2',
+  cardBackground: isDarkMode ? '#2A2A2A' : '#fff',
+  subtleText: isDarkMode ? '#999' : '#C7CECF',
+  accent: isDarkMode ? '#4095A4' : '#4095A4',      
+  danger: isDarkMode ? '#dc3545' : '#dc3545',       
+  buttonPrimary: isDarkMode ? '#3399ff' : '#007bff',
+  buttonText: '#fff',
+  sidebarBg: isDarkMode ? '#222' : '#fff',
+  sidebarBorder: isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(15, 15, 15, 0.2)',
+  priceText: isDarkMode ? '#FFD700' : '#333', // exemple : or en dark mode, gris foncé en light
+  priceSymbol: isDarkMode ? '#aaa' : '#666',  // pour le slash `/` et flèche
+  };
+  const styles = createStyles(colors);
   
 
   const conversionRates = {
@@ -79,75 +99,70 @@ export default function EditAnnonceScreen(props) {
     return `${day}/${month}/${year}`;
   };
 
-  useEffect(() => {
-    const fetchAllData = async () => {
-      setIsLoading(true);
 
-      try {
-        // 🔑 Récupération de l'utilisateur
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
+useEffect(() => {
+  const fetchAllData = async () => {
+    setIsLoading(true);
 
-        if (userError || !user) {
-          console.log('❌ Erreur récupération utilisateur :', userError?.message);
-          setIsLoading(false);
-          return;
-        }
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
 
-        // 🌐 Récupération de la langue
-        const { data: langData, error: langError } = await supabase
-          .from('profiles')
-          .select('language')
-          .eq('auth_id', user.id)
+      if (userError || !user) {
+        console.log('❌ Erreur récupération utilisateur :', userError?.message);
+        setIsLoading(false);
+        return;
+      }
+
+      // 🔤🌗 Récupérer la langue et le thème
+      const { data: langData, error: langError } = await supabase
+        .from('profiles')
+        .select('language, theme')
+        .eq('auth_id', user.id)
+        .single();
+
+      if (!langError && langData) {
+        if (langData.language) changeLanguage(langData.language);
+        changeTheme(langData.theme === 'dark' ? 'dark' : 'light');
+      }
+
+      // 📦 Récupérer l’annonce uniquement si `annonceId` ET `annonceUserId` sont valides
+      if (annonceId && annonceUserId) {
+        console.log('🔄 Chargement de l’annonce avec ID et UserID :', annonceId, annonceUserId);
+
+        const { data: annonceData, error: annonceError } = await supabase
+          .from('annonces')
+          .select('*')
+          .eq('id', annonceId)
+          .eq('user_id', annonceUserId)  // 🔐 Sécurité renforcée
           .single();
 
-        if (langError) {
-          console.log('❌ Erreur récupération langue :', langError.message);
-        } else if (langData?.language) {
-          changeLanguage(langData.language);
+        if (annonceError) {
+          console.log('❌ Erreur récupération annonce :', annonceError.message);
+        } else if (annonceData) {
+          setNomPrenom(annonceData.nom_prenom || '');
+          setDateDepart(formatDateToDisplay(annonceData.date_depart));
+          setDateArrivee(formatDateToDisplay(annonceData.date_arrivee));
+          setVilleDepart(annonceData.ville_depart || '');
+          setVilleArrivee(annonceData.ville_arrivee || '');
+          setDateLimiteDepot(formatDateToDisplay(annonceData.date_limite_depot));
+          setAdressePays(annonceData.adresse_pays || '');
+          setAdresseVille(annonceData.adresse_ville || '');
+          setAdresseRue(annonceData.adresse_rue || '');
+          setPoids(annonceData.poids_max_kg?.toString() || '');
+          setPrice(annonceData.prix_valeur?.toString() || '');
+          setSelectedDevise(annonceData.prix_devise || 'CFA');
         }
-
-        // 📦 Récupération de l’annonce si les IDs sont valides
-        if (annonceId && annonceUserId) {
-          console.log('🔄 Chargement des données pour l’annonce', annonceId, annonceUserId);
-
-          const { data: annonceData, error: annonceError } = await supabase
-            .from('annonces')
-            .select('*')
-            .eq('id', annonceId)
-            .eq('user_id', annonceUserId)
-            .single();
-
-          if (annonceError) {
-            console.error('❌ Erreur chargement annonce :', annonceError);
-            Alert.alert('Erreur', 'Impossible de charger l’annonce: ' + annonceError.message);
-            navigation.goBack();
-          } else if (annonceData) {
-            console.log('✅ Données récupérées :', annonceData);
-
-            setNomPrenom(annonceData.nom_prenom || '');
-            setDateDepart(formatDateToDisplay(annonceData.date_depart));
-            setDateArrivee(formatDateToDisplay(annonceData.date_arrivee));
-            setVilleDepart(annonceData.ville_depart || '');
-            setVilleArrivee(annonceData.ville_arrivee || '');
-            setDateLimiteDepot(formatDateToDisplay(annonceData.date_limite_depot));
-            setAdressePays(annonceData.adresse_pays || '');
-            setAdresseVille(annonceData.adresse_ville || '');
-            setAdresseRue(annonceData.adresse_rue || '');
-            setPoids(annonceData.poids_max_kg?.toString() || '');
-            setPrice(annonceData.prix_valeur?.toString() || '');
-            setSelectedDevise(annonceData.prix_devise || 'CFA');
-          }
-        }
-      } catch (err) {
-        console.error('❌ Erreur inattendue :', err);
-      } finally {
-        setIsLoading(false);
       }
-    };
 
-    fetchAllData();
-  }, [annonceId, annonceUserId]);
+    } catch (err) {
+      console.error('❌ Erreur inattendue :', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  fetchAllData();
+}, [annonceId, annonceUserId]);
 
   const handleUpdate = async () => {
     if (
@@ -211,7 +226,7 @@ export default function EditAnnonceScreen(props) {
     );
   }
   return (
-    <View style={{ flex: 1, backgroundColor: '#fff' }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       {/* Header */}        
       <Navbar/>
       <View style={styles.container}>
@@ -356,7 +371,7 @@ export default function EditAnnonceScreen(props) {
           onChangeText={setPrice}
           style={styles.inputRounded}
           placeholder={translate("Prix", language)}
-          placeholderTextColor="#999"
+          placeholderTextColor={colors.subtleText}
           keyboardType="numeric"
         />
         <Text style={{ alignSelf: 'center', marginHorizontal: 6 }}>/</Text>
@@ -365,6 +380,8 @@ export default function EditAnnonceScreen(props) {
             selectedValue={selectedDevise}
             onValueChange={onChangeDevise}
             style={{ height: 50, marginBottom: 15, width: 120 }}
+            dropdownIconColor={colors.priceSymbol}
+
           >
             {Object.keys(conversionRates).map(dev => (
               <Picker.Item key={dev} label={dev} value={dev} />
@@ -442,17 +459,17 @@ export default function EditAnnonceScreen(props) {
   
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    paddingTop: 28, 
-    backgroundColor: '#fff',
+    paddingTop: 28,
+    backgroundColor: colors.background,
     borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
+    borderBottomColor: colors.border,
   },
 
   leftIcon: {
@@ -469,58 +486,67 @@ const styles = StyleSheet.create({
 
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
     paddingHorizontal: 16,
   },
-
 
   scrollContainer: {
     padding: 16,
   },
+
   annonceCard: {
-    backgroundColor: '#4095A4',
+    backgroundColor: colors.accent,
     borderRadius: 12,
     padding: 16,
     marginBottom: 20,
   },
+
   userHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 12,
   },
+
   userLogo: {
     width: 32,
     height: 32,
     borderRadius: 16,
     marginRight: 10,
   },
+
   userName: {
-    color: '#fff',
+    color: colors.text,
     fontWeight: 'bold',
     fontSize: 16,
   },
+
   annonceContent: {
     marginTop: 8,
   },
+
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 6,
   },
+
   label: {
-    color: '#e0f7fa',
+    color: colors.subtleText,
     fontWeight: '600',
     textTransform: 'capitalize',
   },
+
   value: {
-    color: '#fff',
+    color: colors.text,
     fontWeight: '400',
   },
+
   buttons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 14,
   },
+
   btn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -528,46 +554,57 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 6,
   },
+
   editBtn: {
-    backgroundColor: '#007bff',
+    backgroundColor: colors.buttonPrimary,
   },
+
   deleteBtn: {
-    backgroundColor: '#dc3545',
+    backgroundColor: colors.danger,
   },
+
   btnText: {
-    color: '#fff',
+    color: colors.buttonText,
     marginLeft: 6,
     fontWeight: '600',
   },
+
   sidebarWrapper: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
     borderTopLeftRadius: 13,
     borderTopRightRadius: 13,
     borderWidth: 1,
-    borderColor: 'rgba(15, 15, 15, 0.2)',
+    borderColor: colors.sidebarBorder,
     overflow: 'hidden',
   },
+
   sidebar: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     paddingVertical: 12,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
+
   sidebarItem: {
     alignItems: 'center',
   },
+
   sidebarIcon: {
     width: 32,
     height: 32,
   },
+
   sidebarIconProfil: {
     width: 38,
     height: 38,
   },
+
   sidebarText: {
     fontSize: 14,
     marginTop: 4,
+    color: colors.text,
   },
+
   gp_image: {
     position: 'absolute',
     top: 120,
@@ -577,67 +614,78 @@ const styles = StyleSheet.create({
     height: 230,
     resizeMode: 'cover',
   },
+
   headerContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
     paddingVertical: 15,
     paddingHorizontal: 20,
     borderBottomWidth: 0,
   },
+
   headerText: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#4095A4',
+    color: colors.accent,
   },
+
   headerBar: {
     height: 4,
-    backgroundColor: '#4095A4',
+    backgroundColor: colors.accent,
     marginTop: 6,
     borderRadius: 2,
-    width: 100, // tu peux ajuster
+    width: 100,
   },
+
   scrollContainer: {
     paddingHorizontal: 20,
     paddingTop: 15,
     paddingBottom: 30,
   },
+
   label: {
     fontWeight: '600',
     marginBottom: 6,
-    color: '#333',
+    color: colors.text,
     fontSize: 14,
   },
+
   input: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.inputBackground,
     borderBottomWidth: 1,
-    borderBottomColor: '#bbb',
+    borderBottomColor: colors.border,
     paddingVertical: 10,
     paddingHorizontal: 8,
     marginBottom: 20,
     fontSize: 16,
-    color: '#111',
+    color: colors.text,
   },
+
   pickerWrapper: {
     borderBottomWidth: 1,
-    borderBottomColor: '#bbb',
+    borderBottomColor: colors.border,
     marginBottom: 30,
   },
+
   picker: {
     height: 45,
-    color: '#111',
+    color: colors.text,
   },
+
   button: {
-    backgroundColor: '#4095A4',
+    backgroundColor: colors.accent,
     paddingVertical: 14,
     borderRadius: 5,
     marginTop: 20,
   },
+
   buttonText: {
-    color: '#fff',
+    color: colors.buttonText,
     fontWeight: '700',
     textAlign: 'center',
     fontSize: 16,
   },
-    rowPriceDevise: {
+
+  rowPriceDevise: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-start',
@@ -649,95 +697,116 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#999',
+    borderColor: colors.border,
     paddingHorizontal: 10,
-    backgroundColor: '#fff',
-    color: '#000',
+    backgroundColor: colors.inputBackground,
+    color: colors.text,
   },
 
   pickerWrapperRounded: {
     flex: 1,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#999',
+    borderColor: colors.border,
     overflow: 'hidden',
-    backgroundColor: '#fff',
+    backgroundColor: colors.inputBackground,
     height: 40,
   },
 
   pickerRounded: {
     height: 40,
-    color: '#000',
-    backgroundColor: '#fff',
+    color: colors.text,
+    backgroundColor: colors.inputBackground,
   },
-
 
   row: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  marginBottom: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
   },
+
   column: {
     flex: 1,
     marginHorizontal: 4,
   },
+
   inputGrayRect: {
-    backgroundColor: '#EFF1F2',
-    borderRadius: 5,          
+    backgroundColor: colors.inputBackground,
+    borderRadius: 5,
     borderWidth: 1,
-    borderColor: '#999',
+    borderColor: colors.border,
     height: 40,
     paddingHorizontal: 10,
-    color: '#000',
+    color: colors.text,
   },
+
   input: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.inputBackground,
     borderRadius: 0,
     borderWidth: 1,
-    borderColor: '#999',
+    borderColor: colors.border,
     height: 40,
     paddingHorizontal: 10,
-    color: '#000',
+    color: colors.text,
   },
+
   rowpvr: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginVertical: 10,
   },
+
   field: {
-    flex: 1,               
-    marginHorizontal: 5,   
+    flex: 1,
+    marginHorizontal: 5,
   },
+
   label: {
     fontWeight: 'bold',
     marginBottom: 5,
+    color: colors.text,
   },
+
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,     
+    borderColor: colors.border,
+    borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 8,
     fontSize: 16,
+    color: colors.text,
   },
+
   rowPriceDevise: {
     flexDirection: 'row',
     alignItems: 'center',
   },
+
   inputRounded: {
     flex: 1,
     height: 50,
     borderRadius: 8,
-    borderColor: '#ccc',
+    borderColor: colors.border,
     borderWidth: 1,
     paddingHorizontal: 12,
     fontSize: 16,
+    color: colors.text,
   },
+
   pickerWrapperRounded: {
     borderRadius: 8,
-    borderColor: '#ccc',
+    borderColor: colors.border,
     borderWidth: 1,
     overflow: 'hidden',
   },
-
+  priceInput: {
+      flex: 1,
+      backgroundColor: colors.inputBackground,
+      color: colors.priceText,
+      borderColor: colors.border,
+      borderWidth: 1,
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      marginRight: 8,
+    },
 });

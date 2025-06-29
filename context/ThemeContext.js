@@ -14,6 +14,7 @@ export const lightTheme = {
     primary: '#1e90ff',
     border: '#ccc',
     notification: '#1e90ff',
+    danger: '#e74c3c',
   },
   fonts: {
     regular: {
@@ -34,6 +35,7 @@ export const darkTheme = {
     primary: '#1e90ff',
     border: '#444',
     notification: '#1e90ff',
+    danger: '#ff4d4d', 
   },
   fonts: {
     regular: {
