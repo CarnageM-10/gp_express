@@ -75,6 +75,12 @@ const enTranslations = {
   "MAD": "MAD",
   "DZD": "DZD",
   "CNY": "CNY",
+  "Nom": "Last Name",
+  "Prenom": "First Name",
+  "Numero": "Phone Number",
+  "Localisation": "Location",
+  "Enregistrer": "Save",
+
 };
 
 export default enTranslations;

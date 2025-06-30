@@ -16,11 +16,13 @@ import WaitingValidationScreen from './screens/WaitingValidationScreen';
 import AnnonceDetailScreen from './screens/AnnonceDetailScreen';
 import EditAnnonceScreen from './screens/EditAnnonceScreen';
 import ProfileScreen from './screens/ProfileScreen';
+import EditProfileScreen from './screens/EditProfileScreen';
 
 import { I18nextProvider, useTranslation } from 'react-i18next';
 import { LanguageProvider } from './context/LanguageContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { supabase } from './lib/supabase';
+import FlashMessage from "react-native-flash-message";
 
 const Stack = createNativeStackNavigator();
 
@@ -69,6 +71,7 @@ function MainApp() {
         <Stack.Screen name="AnnonceDetail" component={AnnonceDetailScreen} />
         <Stack.Screen name="EditAnnonce" component={EditAnnonceScreen} />
         <Stack.Screen name="Profile" component={ProfileScreen} />
+        <Stack.Screen name="EditProfile" component={EditProfileScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
@@ -79,6 +82,7 @@ export default function App() {
     <LanguageProvider>
       <ThemeProvider>
           <MainApp />
+          <FlashMessage position="top" />
       </ThemeProvider>
     </LanguageProvider>
   );

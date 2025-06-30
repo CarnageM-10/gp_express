@@ -126,7 +126,7 @@ return (
 
         <View style={styles.separator} />
 
-        <TouchableOpacity style={styles.row}>
+        <TouchableOpacity style={styles.row} onPress={() => navigation.navigate('EditProfile')}>
           <Image source={require('../assets/people.png')} style={styles.icon} />
           <Text style={styles.label}>{translate('Mon profil', language)}</Text>
           <Image source={require('../assets/chevron.png')} style={styles.chevron} />
