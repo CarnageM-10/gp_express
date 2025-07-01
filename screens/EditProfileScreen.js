@@ -6,6 +6,8 @@ import { translate } from '../translations';
 import { useTheme } from '../context/ThemeContext';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '../lib/supabase';
+import * as FileSystem from 'expo-file-system';
+
 
 // ... imports (inchangés)
 
@@ -17,12 +19,19 @@ const EditProfileScreen = () => {
   const [loading, setLoading] = useState(true);
   const [editField, setEditField] = useState(null);
   const [newValue, setNewValue] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showConfirmDeleteAvatar, setShowConfirmDeleteAvatar] = useState(false);
 
   const colors = {
     background: isDarkMode ? '#121212' : '#FFFFFF',
     text: isDarkMode ? '#FFFFFF' : '#000000',
     card: isDarkMode ? '#1E1E1E' : '#F4F4F4',
     border: isDarkMode ? '#333' : '#DDD',
+  };
+
+  const confirmDeleteAvatar = () => {
+  setShowConfirmDeleteAvatar(false);
+  handleDeleteAvatar();
   };
 
   useEffect(() => {
@@ -133,13 +142,121 @@ const EditProfileScreen = () => {
   };
 
   const pickImage = async () => {
-    let result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images });
-    if (!result.canceled) {
-      setProfile({ ...profile, avatar_url: result.assets[0].uri });
-    }
-  };
+    const result = await ImagePicker.launchImageLibraryAsync({
+    mediaType: 'image', // au singulier, string
+    quality: 0.7,
+  });
 
-  if (loading) return <ActivityIndicator style={{ flex: 1 }} />;
+
+
+  if (!result.canceled) {
+    const { data: { user } } = await supabase.auth.getUser();
+    const uploadedUrl = await uploadImageToSupabase(result.assets[0].uri, user.id);
+
+    if (uploadedUrl) {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ avatar_url: uploadedUrl })
+        .eq('auth_id', user.id);
+
+      if (!error) {
+        setProfile(prev => ({ ...prev, avatar_url: uploadedUrl }));
+      } else {
+        console.error('Erreur de mise à jour avatar_url :', error);
+      }
+    }
+  }
+};
+
+const uploadImageToSupabase = async (uri, userId) => {
+  try {
+    // 1. Lire l'image (URI déjà cropée ou non)
+    const base64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+
+    // 2. Base64 -> buffer
+    const buffer = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+
+    // 3. Liste tous les fichiers dans avatars/{userId}
+    const folderPath = `avatars/${userId}`;
+    const { data: listData, error: listError } = await supabase.storage
+      .from('avatars')
+      .list(folderPath);
+
+    if (listError) {
+      console.warn('Erreur listage dossier avatars:', listError.message);
+    } else {
+      // 4. Supprime tous les fichiers existants dans ce dossier
+      const filesToDelete = listData.map(file => `${folderPath}/${file.name}`);
+      if (filesToDelete.length > 0) {
+        const { error: removeError } = await supabase.storage
+          .from('avatars')
+          .remove(filesToDelete);
+        if (removeError) {
+          console.warn('Erreur suppression fichiers avatars:', removeError.message);
+        }
+      }
+    }
+
+    // 5. Upload nouvelle image (toujours nommée profile.jpg)
+    const fileExt = 'jpg'; // ou détecter selon le format de ton image
+    const fileName = `profile.${fileExt}`;
+    const filePath = `${folderPath}/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(filePath, buffer, {
+        contentType: `image/${fileExt}`,
+        upsert: true,
+      });
+
+    if (uploadError) throw uploadError;
+
+    // 6. Récupérer URL publique
+    const { data: publicUrlData } = supabase.storage
+      .from('avatars')
+      .getPublicUrl(filePath);
+
+    return publicUrlData.publicUrl + `?t=${Date.now()}`;
+  } catch (error) {
+    console.error("Erreur upload image avec suppression précédente :", error);
+    return null;
+  }
+};
+
+const handleDeleteAvatar = async () => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const folderPath = `avatars/${user.id}`;
+  const filePath = `${folderPath}/profile.jpg`;
+
+  // Supprime le fichier avatar
+  const { error: deleteError } = await supabase.storage
+    .from('avatars')
+    .remove([filePath]);
+
+  if (deleteError) {
+    console.error('Erreur suppression avatar:', deleteError.message);
+    return;
+  }
+
+  // Met à jour la base de données pour supprimer le lien avatar_url
+  const { error: updateError } = await supabase
+    .from('profiles')
+    .update({ avatar_url: null })
+    .eq('auth_id', user.id);
+
+  if (updateError) {
+    console.error('Erreur mise à jour avatar_url:', updateError.message);
+    return;
+  }
+
+  // Met à jour le state local
+  setProfile(prev => ({ ...prev, avatar_url: null }));
+};
+
+
+if (loading) return <ActivityIndicator style={{ flex: 1 }} />;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -151,14 +268,16 @@ const EditProfileScreen = () => {
           {/* Profil */}
           <View style={styles.profileBlock}>
             <View>
-              <Image
-                source={profile.avatar_url ? { uri: profile.avatar_url } : require('../assets/user.png')}
-                style={styles.profileImage}
-              />
-              <TouchableOpacity style={styles.editIcon} onPress={pickImage}>
-                <Image source={require('../assets/edit.png')} style={styles.editIconImage} />
-              </TouchableOpacity>
-            </View>
+            <Image
+            source={profile.avatar_url ? { uri: profile.avatar_url } : require('../assets/user.png')}
+            style={styles.profileImage}
+          />
+          <TouchableOpacity style={styles.editIcon} onPress={pickImage}>
+            <Image source={require('../assets/edit.png')} style={styles.editIconImage} />
+          </TouchableOpacity>
+
+        </View>
+
             <View style={{ marginLeft: 20 }}>
               <Text style={[styles.name, { color: colors.text }]}>
                 {profile.first_name} {profile.name}
@@ -166,6 +285,16 @@ const EditProfileScreen = () => {
               <Text style={[styles.email, { color: colors.text }]}>{profile.email}</Text>
             </View>
           </View>
+          <View style={styles.avatarContainer}>
+            <TouchableOpacity
+              style={styles.deleteAvatarButton}
+              onPress={() => setShowConfirmDeleteAvatar(true)}
+              disabled={isDeleting}
+            >
+              <Image source={require('../assets/delete.png')} style={{ width: 24, height: 24, opacity: isDeleting ? 0.5 : 1 }} />
+            </TouchableOpacity>
+          </View>
+
 
           <View style={styles.separator} />
 
@@ -203,6 +332,24 @@ const EditProfileScreen = () => {
       </View>
 
       {/* Modal */}
+
+      <Modal visible={showConfirmDeleteAvatar} transparent animationType="fade">
+        <View style={styles.modalContainer}>
+          <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>
+              Voulez-vous supprimer votre photo de profil ?
+            </Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginTop: 20 }}>
+              <TouchableOpacity onPress={() => setShowConfirmDeleteAvatar(false)}>
+                <Text style={{ color: 'gray', fontSize: 18 }}>Annuler</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={confirmDeleteAvatar}>
+                <Text style={{ color: 'red', fontSize: 18 }}>Confirmer</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
       <Modal visible={!!editField} transparent animationType="fade">
         <View style={styles.modalContainer}>
           <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
@@ -329,6 +476,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  avatarContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between', // pousse image à gauche, bouton à droite
+  },
+
 });
 
 export default EditProfileScreen;

@@ -31,15 +31,21 @@ const ProfileScreen = () => {
   const styles = makeStyles(theme);
 
   useEffect(() => {
-    const loadProfile = async () => {
-      const data = await fetchProfileData();
-      if (data) {
+  const loadProfile = async () => {
+    const data = await fetchProfileData();
+    if (data) {
+      if (data.avatar_url && !data.avatar_url.startsWith('http')) {
+        const url = await getAvatarUrl(data.avatar_url);
+        setProfile({ ...data, avatar_url: url });
+      } else {
         setProfile(data);
-        setLanguage(data.language || 'fr');
       }
-    };
-    loadProfile();
-  }, []);
+      setLanguage(data.language || 'fr');
+    }
+  };
+  loadProfile();
+}, []);
+
 
   const toggleNotifications = async () => {
     const updated = { ...profile, notifications_enabled: !profile.notifications_enabled };
@@ -108,6 +114,18 @@ const ProfileScreen = () => {
       navigation.replace('Login');
     }
   };
+    const getAvatarUrl = async (path) => {
+    if (!path) return null;
+    const { data, error } = await supabase.storage
+      .from('your-bucket-name')
+      .getPublicUrl(path);
+    if (error) {
+      console.error('Erreur getPublicUrl:', error.message);
+      return null;
+    }
+    return data.publicUrl;
+  };
+
 
 return (
   <View style={styles.screen}>
@@ -117,12 +135,25 @@ return (
       <View style={styles.container}>
         {/* Profil */}
         <View style={styles.topBlock}>
-          <Image source={require('../assets/user.png')} style={styles.profileImage} />
-          <View style={styles.infoBlock}>
-            <Text style={styles.name}>{profile.name}</Text>
-            <Text style={styles.email}>{profile.email}</Text>
-          </View>
+        {profile.avatar_url ? (
+          <Image
+            source={{ uri: profile.avatar_url }}
+            style={styles.profileImage}
+            resizeMode="cover"
+          />
+        ) : (
+          <Image
+            source={require('../assets/user.png')}
+            style={styles.profileImage}
+            resizeMode="cover"
+          />
+        )}
+        <View style={styles.infoBlock}>
+          <Text style={styles.name}>{profile.name}</Text>
+          <Text style={styles.email}>{profile.email}</Text>
         </View>
+      </View>
+
 
         <View style={styles.separator} />
 

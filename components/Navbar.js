@@ -8,6 +8,12 @@ const Navbar = () => {
   const { theme, themeMode } = useTheme();
   const styles = makeStyles(theme, themeMode);
 
+  // Choix du logo selon le thème
+  const logoSource =
+    themeMode === 'dark'
+      ? require('../assets/logo_noir.png')
+      : require('../assets/logo.png');
+
   return (
     <View style={styles.header}>
       <TouchableOpacity onPress={() => navigation.navigate('Annonce')}>
@@ -16,7 +22,7 @@ const Navbar = () => {
           style={styles.leftIcon}
         />
       </TouchableOpacity>
-      <Image source={require('../assets/logo.png')} style={styles.logo} />
+      <Image source={logoSource} style={styles.logo} />
     </View>
   );
 };
@@ -30,7 +36,7 @@ const makeStyles = (theme, themeMode) =>
       paddingHorizontal: 16,
       paddingVertical: 12,
       paddingTop: 28,
-      backgroundColor: theme.colors.card,
+      backgroundColor: themeMode === 'dark' ? '#0c0c0c' : theme.colors.card,
       borderBottomWidth: 1,
       borderBottomColor: theme.colors.separator,
     },
@@ -44,6 +50,12 @@ const makeStyles = (theme, themeMode) =>
       width: 200,
       height: 60,
       resizeMode: 'contain',
+      marginLeft: 20,
+    },
+    navbar: {
+      flex: 1,
+      backgroundColor: themeMode === 'dark' ? '#0c0c0c' : theme.colors.background,
+      // autres styles éventuels
     },
   });
 
