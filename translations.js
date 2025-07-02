@@ -80,6 +80,7 @@ const enTranslations = {
   "Numero": "Phone Number",
   "Localisation": "Location",
   "Enregistrer": "Save",
+  "Valider": "Confirm",
 
 };
 

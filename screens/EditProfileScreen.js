@@ -7,6 +7,7 @@ import { useTheme } from '../context/ThemeContext';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '../lib/supabase';
 import * as FileSystem from 'expo-file-system';
+import { useNavigation } from '@react-navigation/native';
 
 
 // ... imports (inchangés)
@@ -21,6 +22,12 @@ const EditProfileScreen = () => {
   const [newValue, setNewValue] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
   const [showConfirmDeleteAvatar, setShowConfirmDeleteAvatar] = useState(false);
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [emailMessage, setEmailMessage] = useState('');
+  const navigation = useNavigation();
+
+
 
   const colors = {
     background: isDarkMode ? '#121212' : '#FFFFFF',
@@ -48,19 +55,31 @@ const EditProfileScreen = () => {
     loadData();
   }, []);
 
-  const fetchProfileData = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return null;
+const fetchProfileData = async () => {
+  const { data, error } = await supabase.auth.getSession();
+  if (error) {
+    console.log('Erreur getSession:', error);
+    return null;
+  }
+  if (!data?.session?.user) {
+    console.log('Aucun utilisateur connecté');
+    return null;
+  }
+  const user = data.session.user;
 
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('auth_id', user.id)
-      .single();
+  const { data: profileData, error: profileError } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('auth_id', user.id)
+    .single();
 
-    if (error) return null;
-    return data;
-  };
+  if (profileError) {
+    console.log('Erreur fetch profile:', profileError);
+    return null;
+  }
+
+  return profileData;
+};
 
   const handleEdit = (field) => {
     setEditField(field);
@@ -256,6 +275,7 @@ const handleDeleteAvatar = async () => {
 };
 
 
+
 if (loading) return <ActivityIndicator style={{ flex: 1 }} />;
 
   return (
@@ -303,16 +323,17 @@ if (loading) return <ActivityIndicator style={{ flex: 1 }} />;
             { label: translate('Prenom', language), key: 'first_name' },
             { label: translate('Numero', language), key: 'number' },
             { label: translate('Location', language), key: 'location' },
-          ].map(({ label, key }) => (
+            { label: 'Email', key: 'email', isEmail: true }
+          ].map(({ label, key, isEmail }) => (
             <TouchableOpacity
               key={key}
-              style={[styles.infoBlock, { backgroundColor: colors.card }]}
-              onPress={() => handleEdit(key)}
+              style={[styles.fieldRow, { borderColor: colors.border }]}
+              onPress={() => isEmail ? setShowEmailModal(true) : handleEdit(key)}
             >
-              <View style={styles.infoRow}>
-                <Text style={[styles.infoLabel, { color: colors.text }]}>{label}</Text>
-                <Text style={[styles.infoValue, { color: colors.text }]}>{profile[key]}</Text>
-              </View>
+              <Text style={[styles.fieldLabel, { color: colors.text }]}>{label}</Text>
+              <Text style={[styles.fieldValue, { color: colors.text }]}>
+                {profile[key] || '–'}
+              </Text>
             </TouchableOpacity>
           ))}
 
@@ -332,6 +353,89 @@ if (loading) return <ActivityIndicator style={{ flex: 1 }} />;
       </View>
 
       {/* Modal */}
+      <Modal visible={showEmailModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContain, { backgroundColor: colors.card }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Nouvelle adresse email</Text>
+            <TextInput
+              placeholder="ex: moi@email.com"
+              placeholderTextColor="#888"
+              style={[styles.modalInput, { color: colors.text, borderColor: colors.border }]}
+              value={newEmail}
+              onChangeText={setNewEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+
+            {/* Message d'info */}
+            {emailMessage ? (
+              <Text style={{ color: emailMessage.startsWith('✅') ? 'green' : 'red', marginVertical: 10 }}>
+                {emailMessage}
+              </Text>
+            ) : null}
+
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-start' }}>
+              <TouchableOpacity
+                onPress={async () => {
+                  try {
+                    const { data: { user }, error: userError } = await supabase.auth.getUser();
+                    if (userError || !user) {
+                      setEmailMessage("❌ Utilisateur non connecté.");
+                      return;
+                    }
+
+                    const { error: authError } = await supabase.auth.updateUser({ email: newEmail });
+                    if (authError) {
+                      setEmailMessage("❌ Erreur Auth : " + authError.message);
+                      return;
+                    }
+
+                    const { error: profileError } = await supabase
+                      .from('profiles')
+                      .update({ email: newEmail })
+                      .eq('auth_id', user.id);
+
+                    if (profileError) {
+                      setEmailMessage("⚠️ Email modifié dans Auth, mais échec dans `profiles` : " + profileError.message);
+                    }
+
+                    setEmailMessage("✅ Un email de confirmation a été envoyé à la nouvelle adresse. Veuillez cliquer sur le lien dans cet email pour valider la modification.");
+
+                    setTimeout(async () => {
+                      setShowEmailModal(false);
+                      await supabase.auth.signOut();
+                      navigation.navigate('Login');
+                    }, 4000);
+                  } catch (e) {
+                    console.error("Erreur inattendue :", e);
+                    setEmailMessage("❌ Erreur inattendue.");
+                  }
+                }}
+                style={[styles.modalButton, { backgroundColor: '#007AFF',marginRight: 10  }]}
+              >
+                <Text style={styles.modalButtonText}>{translate('Valider', language)}</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => {
+                  setShowEmailModal(false);
+                  setEmailMessage('');
+                }}
+                style={[styles.modalButton, { backgroundColor: '#999' }]}
+              >
+                <Text style={styles.modalButtonText}>{translate('Annuler', language)}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+    {emailMessage !== '' && (
+      <View style={styles.toastMessage}>
+        <Text style={{ color: colors.text }}>{emailMessage}</Text>
+      </View>
+    )}
+
 
       <Modal visible={showConfirmDeleteAvatar} transparent animationType="fade">
         <View style={styles.modalContainer}>
@@ -350,12 +454,14 @@ if (loading) return <ActivityIndicator style={{ flex: 1 }} />;
           </View>
         </View>
       </Modal>
+      
       <Modal visible={!!editField} transparent animationType="fade">
         <View style={styles.modalContainer}>
           <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
             <Text style={[styles.modalTitle, { color: colors.text }]}>
               {translate('Modifier', language)} {translate(editField, language)}
             </Text>
+
             <TextInput
               style={[styles.input, { color: colors.text, borderColor: colors.border }]}
               value={newValue}
@@ -363,12 +469,23 @@ if (loading) return <ActivityIndicator style={{ flex: 1 }} />;
               placeholder={translate(editField, language)}
               placeholderTextColor="#999"
             />
-            <TouchableOpacity onPress={handleSaveField}>
-              <Text style={styles.saveButtonText}>{translate('Enregistrer', language)}</Text>
-            </TouchableOpacity>
+
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <TouchableOpacity onPress={handleSaveField} style={[styles.modalButton, { backgroundColor: '#007AFF' }]}>
+                <Text style={styles.modalButtonText}>{translate('Enregistrer', language)}</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => setEditField(null)} // ou la fonction qui ferme le modal
+                style={[styles.modalButton, { backgroundColor: '#999' }]}
+              >
+                <Text style={styles.modalButtonText}>{translate('Annuler', language)}</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
+
     </View>
   );
 };
@@ -481,6 +598,69 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between', // pousse image à gauche, bouton à droite
   },
+  modalOverlay: {
+  flex: 1,
+  backgroundColor: 'rgba(0,0,0,0.5)',
+  justifyContent: 'center',
+  alignItems: 'center',
+  },
+  modalContain: {
+    width: '85%',
+    padding: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  modalInput: {
+    width: '100%',
+    padding: 10,
+    borderWidth: 1,
+    borderRadius: 5,
+    marginBottom: 15,
+  },
+  modalButton: {
+    backgroundColor: '#007AFF',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+  },
+  modalButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  toastMessage: {
+    position: 'absolute',
+    bottom: 40,
+    left: 20,
+    right: 20,
+    padding: 12,
+    backgroundColor: '#444',
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  fieldRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 15,
+    marginBottom: 12,
+  },
+  fieldLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  fieldValue: {
+    fontSize: 16,
+    fontWeight: '400',
+  },
+
 
 });
 
