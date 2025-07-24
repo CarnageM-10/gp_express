@@ -91,10 +91,10 @@ useEffect(() => {
 
   const formatDate = (date) => {
     const d = new Date(date);
-    const day = (`0${d.getDate()}`).slice(-2);
+    const year = d.getFullYear();
     const month = (`0${d.getMonth() + 1}`).slice(-2);
-    const year = `${d.getFullYear()}`.slice(-4);
-    return `${day}/${month}/${year}`;
+    const day = (`0${d.getDate()}`).slice(-2);
+    return `${year}-${month}-${day}`;
   };
   const conversionRates = {
     'CFA': 1,               // Franc CFA (XOF)
@@ -346,7 +346,7 @@ const handlePublish = async () => {
         <TextInput
           placeholder={translate("Prix", language)}
           placeholderTextColor={isDarkMode ? '#BBB' : '#C7CECF'}
-          value={price !== '' && !isNaN(parseFloat(price)) ? parseFloat(price).toFixed(2) : ''}
+          value={price}
           onChangeText={(text) => setPrice(text)}
           keyboardType="numeric"
           style={[styles.input, { flex: 1 }]}

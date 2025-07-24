@@ -93,10 +93,10 @@ export default function EditAnnonceScreen(props) {
     if (!isoDate) return '';
     const d = new Date(isoDate);
     if (isNaN(d.getTime())) return '';
-    const day = ('0' + d.getDate()).slice(-2);
-    const month = ('0' + (d.getMonth() + 1)).slice(-2);
     const year = d.getFullYear();
-    return `${day}/${month}/${year}`;
+    const month = (`0${d.getMonth() + 1}`).slice(-2);
+    const day = (`0${d.getDate()}`).slice(-2);
+    return `${year}-${month}-${day}`;
   };
 
 

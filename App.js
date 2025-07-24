@@ -17,6 +17,8 @@ import AnnonceDetailScreen from './screens/AnnonceDetailScreen';
 import EditAnnonceScreen from './screens/EditAnnonceScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import EditProfileScreen from './screens/EditProfileScreen';
+import ChatListScreen from './screens/ChatListScreen';
+import ChatDetailScreen from './screens/ChatDetailScreen';
 
 import { I18nextProvider, useTranslation } from 'react-i18next';
 import { LanguageProvider } from './context/LanguageContext';
@@ -72,6 +74,8 @@ function MainApp() {
         <Stack.Screen name="EditAnnonce" component={EditAnnonceScreen} />
         <Stack.Screen name="Profile" component={ProfileScreen} />
         <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+        <Stack.Screen name="ChatDetail" component={ChatDetailScreen} />
+        <Stack.Screen name="Messages" component={ChatListScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
