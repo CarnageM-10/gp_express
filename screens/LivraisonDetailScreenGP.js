@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'; 
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   Image,
+  Alert,
 } from 'react-native';
 import { supabase } from '../lib/supabase';
 import Navbar from '../components/Navbar';
@@ -27,9 +28,6 @@ export function LivraisonDetailScreenGP({ route }) {
   const t = {
     fr: {
       loading: 'Chargement...',
-      retrieved: 'Colis récupéré et payé',
-      inProgress: 'Livraison en cours',
-      delivered: 'Livraison terminée',
       date: '🕓 Livré le',
       poids: 'Poids',
       prix: 'Prix',
@@ -38,9 +36,6 @@ export function LivraisonDetailScreenGP({ route }) {
     },
     en: {
       loading: 'Loading...',
-      retrieved: 'Parcel retrieved and paid',
-      inProgress: 'Delivery in progress',
-      delivered: 'Delivery completed',
       date: '🕓 Delivered on',
       poids: 'Weight',
       prix: 'Price',
@@ -58,7 +53,7 @@ export function LivraisonDetailScreenGP({ route }) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { data: profile, error } = await supabase
+    const { data: profile } = await supabase
       .from('profiles')
       .select('theme')
       .eq('auth_id', user.id)
@@ -99,33 +94,54 @@ export function LivraisonDetailScreenGP({ route }) {
   const currentEtapeIndex = etapes.length;
 
   const etapesList = [
-    { key: 'recupere', label: t.retrieved },
-    { key: 'en_cours', label: t.inProgress },
-    { key: 'termine', label: t.delivered },
+    { key: 'colis récupéré', label: 'Colis récupéré' },
+    { key: 'vérification du colis', label: 'Vérification du colis' },
+    { key: 'paiement effectué', label: 'Paiement effectué' },
+    { key: 'livraison en cours', label: 'Livraison en cours' },
+    { key: 'livraison effectué', label: 'Livraison effectué' },
   ];
 
-  const saveEtape = async () => {
-    if (!selectedEtape) return;
+    const saveEtape = async () => {
+      if (!selectedEtape) return;
 
-    const status = selectedEtape === 'termine' ? 'livree' : 'en_cours';
+      // Blocage si "vérification du colis" sans validation de "colis récupéré"
+      if (
+        selectedEtape === 'vérification du colis' &&
+        !etapes.find(e => e.etape === 'colis récupéré')?.validation
+      ) {
+        Alert.alert(
+          'Action bloquée',
+          'Vous devez passer par l’agence GP Express pour vérifier votre colis.'
+        );
+        return;
+      }
 
-    await supabase.from('livraison_etapes').insert({
-      delivery_request_id: id,
-      etape: selectedEtape,
-      status,
-      create_at: new Date().toISOString(),
-    });
+      const status = selectedEtape === 'livraison effectué' ? 'livree' : 'en_cours';
 
-    if (selectedEtape === 'termine') {
-      await supabase
-        .from('delivery_requests')
-        .update({ status: 'livree' })
-        .eq('id', id);
-    }
+      const payload = {
+        delivery_request_id: id,
+        etape: selectedEtape,
+        status,
+        create_at: new Date().toISOString(),
+      };
 
-    setSelectedEtape(null);
-    fetchDetails();
-  };
+      // On initialise la validation à false seulement pour la première étape
+      if (selectedEtape === 'colis récupéré') {
+        payload.validation = false;
+      }
+
+      await supabase.from('livraison_etapes').insert(payload);
+
+      if (selectedEtape === 'livraison effectué') {
+        await supabase
+          .from('delivery_requests')
+          .update({ status: 'livree' })
+          .eq('id', id);
+      }
+
+      setSelectedEtape(null);
+      fetchDetails();
+    };
 
   if (!request || !annonce) {
     return <Text style={{ padding: 20 }}>{t.loading}</Text>;
@@ -200,13 +216,12 @@ export function LivraisonDetailScreenGP({ route }) {
           {selectedEtape && (
             <TouchableOpacity onPress={saveEtape} style={styles.saveButton}>
               <Text style={styles.saveButtonText}>
-                {etapes.length === 3 ? t.modifier : t.enregistrer}
+                {etapes.length === 4 ? t.modifier : t.enregistrer}
               </Text>
             </TouchableOpacity>
           )}
 
-          {/* ✅ Affiche la date de livraison uniquement après 3 étapes validées et dernière = 'termine' */}
-          {etapes.length === 3 && lastStep?.etape === 'termine' && (
+          {etapes.length === 5 && lastStep?.etape === 'livraison effectué' && (
             <Text style={{ marginTop: 10, color: isDark ? '#90ee90' : '#006400' }}>
               {t.date} {new Date(lastStep.create_at).toLocaleString()}
             </Text>
