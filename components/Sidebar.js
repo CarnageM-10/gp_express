@@ -58,7 +58,7 @@ const Sidebar = ({ language }) => {
 
         <TouchableOpacity
           style={styles.sidebarItem}
-          onPress={() => navigation.navigate('Suivi')}
+          onPress={() => navigation.navigate('LivraisonList')}
         >
           <Image
             source={require('../assets/fast-delivery.png')}

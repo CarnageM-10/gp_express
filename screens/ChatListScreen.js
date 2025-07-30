@@ -12,7 +12,7 @@ export default function ChatListScreen() {
   const navigation = useNavigation();
   const [chats, setChats] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { language, changeLanguage  } = useLanguage();
+  const { language, changeLanguage } = useLanguage();
   const { themeMode } = useTheme();
   const isDarkMode = themeMode === 'dark';
 
@@ -29,7 +29,6 @@ export default function ChatListScreen() {
 
   useEffect(() => {
     const fetchChats = async () => {
-      // Récupère l'utilisateur connecté
       const {
         data: { user },
         error: userError,
@@ -41,7 +40,6 @@ export default function ChatListScreen() {
         return;
       }
 
-      // Utilise l'id du user pour la requête
       const { data, error } = await supabase
         .from('chats')
         .select(`
@@ -53,10 +51,11 @@ export default function ChatListScreen() {
             nom_prenom,
             colis_name,
             adresse_livraison,
-            ville_arrivee
+            ville_arrivee,
+            numero_suivi
           )
         `)
-        .eq('gp_auth_id', user.id); // ← ID du GP connecté
+        .eq('gp_auth_id', user.id);
 
       if (error) {
         console.error('Erreur récupération chats:', error);
@@ -74,31 +73,43 @@ export default function ChatListScreen() {
   }
 
   return (
-  <View style={{ flex: 1, backgroundColor: colors.background }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       <Navbar />
-    <View style={styles.container}>
-      <FlatList
-        data={chats}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.chatItem}
-            onPress={() =>
-              navigation.navigate('ChatDetail', {
-                chatId: item.id,
-                deliveryRequest: item.delivery_requests,
-                clientId: item.client_auth_id,
-              })
-            }
-          >
-            <Text style={styles.chatName}>{item.delivery_requests.nom_prenom}</Text>
-            <Text style={styles.status}>{item.status}</Text>
-          </TouchableOpacity>
-        )}
-      />
+      <View style={styles.container}>
+        <FlatList
+          data={chats}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.chatItem}
+              onPress={async () => {
+                // 🔄 Requête Supabase pour récupérer les infos *actualisées* de delivery_requests
+                const { data: latestDeliveryRequest, error } = await supabase
+                  .from('delivery_requests')
+                  .select('*')
+                  .eq('id', item.delivery_requests.id)
+                  .single();
+
+                if (error) {
+                  console.error("Erreur de récupération des données actualisées:", error);
+                  return;
+                }
+
+                navigation.navigate('ChatDetail', {
+                  chatId: item.id,
+                  deliveryRequest: latestDeliveryRequest,
+                  clientId: item.client_auth_id,
+                });
+              }}
+            >
+              <Text style={styles.chatName}>{item.delivery_requests.nom_prenom}</Text>
+              <Text style={styles.status}>{item.status}</Text>
+            </TouchableOpacity>
+          )}
+        />
+      </View>
+      <Sidebar language={language} />
     </View>
-    <Sidebar language={language} />
-  </View>
   );
 }
 
